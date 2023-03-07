@@ -25,6 +25,16 @@ export function esbuildCachePlugin(options: Options): Plugin {
         namespace,
       }));
 
+      // npm import is not currently supported
+      build.onResolve({ filter: /^npm:/ }, (args) => {
+        console.log(args.path);
+
+        return {
+          path: args.path,
+          warnings: [{ text: 'npm import is not supported by esbuild-cache-plugin' }]
+        }
+      });
+
       // Resolve all namespace-marked paths to URLs
       build.onResolve({ filter: /.*/, namespace }, (args) => {
         try {
