@@ -1,4 +1,4 @@
-import { Loader, Plugin } from 'https://deno.land/x/esbuild@v0.17.11/mod.js';
+import { Loader, Plugin } from 'https://deno.land/x/esbuild@v0.17.13/mod.js';
 import * as Cache from 'https://deno.land/x/cache@0.2.13/mod.ts';
 
 interface Options {
@@ -31,8 +31,10 @@ export function esbuildCachePlugin(options: Options): Plugin {
 
         return {
           path: args.path,
-          warnings: [{ text: 'npm import is not supported by esbuild-cache-plugin' }]
-        }
+          warnings: [{
+            text: 'npm import is not supported by esbuild-cache-plugin',
+          }],
+        };
       });
 
       // Resolve all namespace-marked paths to URLs
