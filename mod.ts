@@ -1,15 +1,15 @@
-import { Loader, Plugin } from 'https://deno.land/x/esbuild@v0.17.13/mod.js';
-import * as Cache from 'https://deno.land/x/cache@0.2.13/mod.ts';
+import { esbuild } from './deps.ts';
+import { cache as Cache } from './deps.ts';
 
 interface Options {
   directory?: string;
   rules?: [{
     test: RegExp;
-    loader: Loader | string;
+    loader: esbuild.Loader | string;
   }];
 }
 
-export function esbuildCachePlugin(options: Options): Plugin {
+export function esbuildCachePlugin(options: Options): esbuild.Plugin {
   const namespace = 'esbuild-cache-plugin';
   if (options.directory) {
     Cache.configure({ directory: options.directory });
@@ -65,7 +65,7 @@ export function esbuildCachePlugin(options: Options): Plugin {
 
         return {
           contents: await Deno.readTextFile(file.path),
-          loader: loader as Loader,
+          loader: loader as esbuild.Loader,
         };
       });
     },
