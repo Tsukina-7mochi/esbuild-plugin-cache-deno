@@ -3,10 +3,10 @@ import { cache as Cache } from './deps.ts';
 import { posix } from './deps.ts';
 
 interface Importmap {
-  imports?: { [key: string]: string },
+  imports?: { [key: string]: string };
   scope?: {
-    [key: string]: { [key: string]: string }
-  },
+    [key: string]: { [key: string]: string };
+  };
 }
 
 interface Options {
@@ -30,14 +30,14 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
     name: 'esbuild-cache-plugin',
     setup(build) {
       // resolve import map
-      for(const importName in imports) {
+      for (const importName in imports) {
         const filter = new RegExp(`^${importName}$`, 'i');
 
         build.onResolve({ filter }, (args) => {
           let path = imports[args.path];
-          for(const scopePath in scope) {
-            if(!posix.relative(scopePath, args.importer).startsWith('..')) {
-              if(args.path in scope[scopePath]) {
+          for (const scopePath in scope) {
+            if (!posix.relative(scopePath, args.importer).startsWith('..')) {
+              if (args.path in scope[scopePath]) {
                 path = scope[scopePath][args.path];
               }
             }
