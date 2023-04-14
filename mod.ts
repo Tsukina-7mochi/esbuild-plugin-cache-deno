@@ -1,34 +1,54 @@
 import { esbuild } from './deps.ts';
 import { cache as Cache } from './deps.ts';
+import { posix } from './deps.ts';
+
+interface ImportMap {
+  imports?: { [key: string]: string },
+  scope?: {
+    [key: string]: { [key: string]: string }
+  },
+}
 
 interface Options {
   directory?: string;
+  importMap?: ImportMap;
   rules?: [{
     test: RegExp;
     loader: esbuild.Loader | string;
   }];
 }
 
-export function esbuildCachePlugin(options: Options): esbuild.Plugin {
+function esbuildCachePlugin(options: Options): esbuild.Plugin {
   const namespace = 'esbuild-cache-plugin';
   if (options.directory) {
     Cache.configure({ directory: options.directory });
   }
+  const imports = options.importMap?.imports ?? {};
+  const scope = options.importMap?.scope ?? {};
 
   return {
     name: 'esbuild-cache-plugin',
     setup(build) {
-      // tag import paths starting with "http:" and "https:"
-      // with the namespace
-      build.onResolve({ filter: /^https?:\/\// }, (args) => ({
-        path: args.path,
-        namespace,
-      }));
+      // resolve import map
+      for(const importName in imports) {
+        const filter = new RegExp(`^${importName}$`, 'i');
+
+        build.onResolve({ filter }, (args) => {
+          let path = imports[args.path];
+          for(const scopePath in scope) {
+            if(!posix.relative(scopePath, args.importer).startsWith('..')) {
+              if(args.path in scope[scopePath]) {
+                path = scope[scopePath][args.path];
+              }
+            }
+          }
+
+          return { path, namespace };
+        });
+      }
 
       // npm import is not currently supported
       build.onResolve({ filter: /^npm:/ }, (args) => {
-        console.log(args.path);
-
         return {
           path: args.path,
           warnings: [{
@@ -71,3 +91,7 @@ export function esbuildCachePlugin(options: Options): esbuild.Plugin {
     },
   };
 }
+
+export { esbuildCachePlugin };
+
+export default esbuildCachePlugin;
