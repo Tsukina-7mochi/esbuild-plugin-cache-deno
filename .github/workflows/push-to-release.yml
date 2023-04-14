@@ -1,0 +1,100 @@
+name: push-to-release
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  get-release-mode:
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    outputs:
+      mode: ${{ steps.output-mode.outputs.mode }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Get first line of commit message
+        env:
+          MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          echo -e "MESSAGE_1=$MESSAGE" | head -n 1 >> $GITHUB_ENV
+
+      - name: Output mode
+        id: output-mode
+        env:
+          IS_MAJOR: ${{ contains(env.MESSAGE_1, '[release major]') }}
+          IS_MINOR: ${{ contains(env.MESSAGE_1, '[release minor]') }}
+          IS_PATCH: ${{ contains(env.MESSAGE_1, '[release patch]') }}
+        run: |
+          if [[ "$IS_MAJOR" == "true" ]]; then
+            MODE="M"
+          elif [[ "$IS_MINOR" == "true" ]]; then
+            MODE="m"
+          elif [[ "$IS_PATCH" == "true" ]]; then
+            MODE="p"
+          else
+            MODE="none"
+          fi
+          echo "mode=$MODE" >> $GITHUB_OUTPUT
+
+  create-tag-and-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    needs: get-release-mode
+    if: ${{ needs.get-release-mode.outputs.mode != 'none' }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Get latest release version
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO_NAME: ${{ github.repository }}
+        run: |
+          JSON_TEXT=$(curl -sSL \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            https://api.github.com/repos/$REPO_NAME/releases/latest \
+          )
+          VERSION=$(echo "$JSON_TEXT" | jq ".tag_name" | sed -E 's/^"v?//' | sed -E 's/"$//')
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Increase version
+        run: |
+          curl -sSL https://raw.githubusercontent.com/fmahnke/shell-semver/master/increment_version.sh > increment_version.sh
+          VERSION=$(bash increment_version.sh -${{ needs.get-release-mode.outputs.mode }} $VERSION)
+          echo "TAG_NAME=v$VERSION" >> $GITHUB_ENV
+
+      - name: Add tag ${{ env.TAG_NAME }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO_NAME: ${{ github.repository }}
+          MESSAGE: ${{ toJson(github.event.head_commit.message) }}
+          SHA: ${{ github.sha }}
+        run: |
+          curl -L \
+            -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            https://api.github.com/repos/$REPO_NAME/git/tags \
+            -d "{\"tag\":\"$TAG_NAME\",\"message\":$MESSAGE,\"object\":\"$SHA\",\"type\":\"commit\"}"
+
+      - name: Create release ${{ env.TAG_NAME }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO_NAME: ${{ github.repository }}
+          MESSAGE: ${{ toJson(github.event.head_commit.message) }}
+          SHA: ${{ github.sha }}
+          NAME: Release ${{ env.TAG_NAME }}
+          DRAFT: false
+          PRERELEASE: false
+          GENERATE_RELEASE_NOTES: true
+        run: |
+          curl -L \
+            -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            https://api.github.com/repos/$REPO_NAME/releases \
+            -d "{\"tag_name\":\"$TAG_NAME\",\"target_commitish\":\"$SHA\",\"name\":\"$NAME\",\"body\":$MESSAGE,\"draft\":$DRAFT,\"prerelease\":$PRERELEASE,\"generate_release_notes\":$GENERATE_RELEASE_NOTES}"
