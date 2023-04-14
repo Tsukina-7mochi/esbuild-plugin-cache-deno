@@ -2,7 +2,7 @@ import { esbuild } from './deps.ts';
 import { cache as Cache } from './deps.ts';
 import { posix } from './deps.ts';
 
-interface ImportMap {
+interface Importmap {
   imports?: { [key: string]: string },
   scope?: {
     [key: string]: { [key: string]: string }
@@ -11,7 +11,7 @@ interface ImportMap {
 
 interface Options {
   directory?: string;
-  importMap?: ImportMap;
+  importmap?: Importmap;
   rules?: [{
     test: RegExp;
     loader: esbuild.Loader | string;
@@ -23,8 +23,8 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
   if (options.directory) {
     Cache.configure({ directory: options.directory });
   }
-  const imports = options.importMap?.imports ?? {};
-  const scope = options.importMap?.scope ?? {};
+  const imports = options.importmap?.imports ?? {};
+  const scope = options.importmap?.scope ?? {};
 
   return {
     name: 'esbuild-cache-plugin',

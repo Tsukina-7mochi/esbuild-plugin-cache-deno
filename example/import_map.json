@@ -1,0 +1,10 @@
+{
+  "imports": {
+    "preact": "https://esm.sh/preact@10"
+  },
+  "scope": {
+    "./example/someDir": {
+      "preact": "https://esm.sh/preact@8"
+    }
+  }
+}
