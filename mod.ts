@@ -18,6 +18,16 @@ interface Options {
   }];
 }
 
+const defaultLoaderRules = [
+  { test: /\.(c|m)?js$/, loader: 'js' },
+  { test: /\.jsx$/, loader: 'jsx' },
+  { test: /\.(c|m)?ts$/, loader: 'ts' },
+  { test: /\.tsx$/, loader: 'tsx' },
+  { test: /\.json$/, loader: 'json' },
+  { test: /\.css$/, loader: 'css' },
+  { test: /\.txt$/, loader: 'text' },
+];
+
 function esbuildCachePlugin(options: Options): esbuild.Plugin {
   const namespace = 'esbuild-cache-plugin';
   if (options.directory) {
@@ -80,6 +90,14 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
           if (rule.test.test(args.path)) {
             loader = rule.loader;
             break;
+          }
+        }
+        if(typeof loader === 'undefined') {
+          for (const rule of defaultLoaderRules) {
+            if(rule.test.test(args.path)) {
+              loader = rule.loader;
+              break;
+            }
           }
         }
 
