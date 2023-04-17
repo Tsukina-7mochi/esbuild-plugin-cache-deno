@@ -92,9 +92,9 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
             break;
           }
         }
-        if(typeof loader === 'undefined') {
+        if (typeof loader === 'undefined') {
           for (const rule of defaultLoaderRules) {
-            if(rule.test.test(args.path)) {
+            if (rule.test.test(args.path)) {
               loader = rule.loader;
               break;
             }
