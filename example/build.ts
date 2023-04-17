@@ -14,7 +14,7 @@ const config: esbuild.BuildOptions = {
     },
   ],
   bundle: true,
-  outdir: './example',
+  outdir: './example/dist',
   platform: 'browser',
   plugins: [
     esbuildCachePlugin({
