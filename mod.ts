@@ -104,7 +104,7 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
         const lockMap = options.lockMap;
         let remoteUrl = args.path;
         if (!(remoteUrl in lockMap.remote)) {
-          // Check if the redirect destination is in list
+          // check if the redirect destination is in list
           const redirectLocation = await getRedirectedLocation(remoteUrl);
           if (typeof redirectLocation !== 'string') {
             return null;
@@ -135,7 +135,7 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
         };
       });
 
-      // Verify the checksum of the cached file
+      // verify the checksum of the cached file
       // and return the content with the appropriate loader
       build.onLoad(
         { filter: /.*/, namespace: remoteCacheNamespace },
