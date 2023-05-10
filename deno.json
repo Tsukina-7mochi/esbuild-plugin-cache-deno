@@ -36,5 +36,8 @@
       "singleQuote": true,
       "useTabs": false
     }
+  },
+  "tasks": {
+    "build": "deno run -A ./example/build.ts"
   }
 }
