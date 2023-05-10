@@ -1,6 +1,8 @@
 import { esbuild } from '../deps.ts';
 import esbuildCachePlugin from '../mod.ts';
-import importmap from "./import_map.json" assert { type: "json" };
+import importmap from './import_map.json' assert { type: 'json' };
+
+const lockMap = JSON.parse(Deno.readTextFileSync('deno.lock'));
 
 const config: esbuild.BuildOptions = {
   entryPoints: [
@@ -18,7 +20,8 @@ const config: esbuild.BuildOptions = {
   platform: 'browser',
   plugins: [
     esbuildCachePlugin({
-      directory: './example/cache',
+      lockMap,
+      denoCacheDirectory: '/home/ts7m/.cache/deno',
       importmap
     }),
   ],

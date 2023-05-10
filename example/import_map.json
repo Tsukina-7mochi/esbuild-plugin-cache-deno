@@ -1,9 +1,10 @@
 {
   "imports": {
-    "preact": "https://esm.sh/preact@10"
+    "preact": "https://esm.sh/preact@10",
+    "semver": "npm:semver"
   },
-  "scope": {
-    "./example/someDir": {
+  "scopes": {
+    "example/someDir": {
       "preact": "https://esm.sh/preact@8"
     }
   }
