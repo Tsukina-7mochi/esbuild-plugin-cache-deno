@@ -14,7 +14,9 @@
   "lint": {
     "files": {
       "include": [
-        "mod.ts"
+        "mod.ts",
+      "deps.ts",
+      "example/"
       ]
     },
     "rules": {
@@ -24,18 +26,16 @@
     }
   },
   "fmt": {
-    "files": {
-      "include": [
-        "mod.ts"
-      ]
-    },
-    "options": {
-      "indentWidth": 2,
-      "lineWidth": 80,
-      "proseWrap": "always",
-      "singleQuote": true,
-      "useTabs": false
-    }
+    "include": [
+      "mod.ts",
+      "deps.ts",
+      "example/"
+    ],
+    "indentWidth": 2,
+    "lineWidth": 80,
+    "proseWrap": "always",
+    "singleQuote": true,
+    "useTabs": false
   },
   "tasks": {
     "build": "deno run -A ./example/build.ts"

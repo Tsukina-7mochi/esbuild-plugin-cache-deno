@@ -22,7 +22,7 @@ const config: esbuild.BuildOptions = {
     esbuildCachePlugin({
       lockMap,
       denoCacheDirectory: '/home/ts7m/.cache/deno',
-      importmap
+      importmap,
     }),
   ],
 };

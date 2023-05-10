@@ -1,3 +1,3 @@
-import * as preact from "preact";
+import * as preact from 'preact';
 
-console.log(preact)
+console.log(preact);
