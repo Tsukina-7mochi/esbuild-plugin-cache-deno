@@ -141,7 +141,6 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
         { filter: /.*/, namespace: remoteCacheNamespace },
         async (args) => {
           const pluginData = args.pluginData as RemoteCachePluginData;
-          console.log(args);
 
           try {
             const contents = await Deno.readFile(pluginData.cachePath);
