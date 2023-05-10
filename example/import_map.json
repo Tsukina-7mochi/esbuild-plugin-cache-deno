@@ -1,7 +1,7 @@
 {
   "imports": {
     "preact": "https://esm.sh/preact@10",
-    "semver": "npm:semver"
+    "lodash": "npm:lodash"
   },
   "scopes": {
     "example/someDir": {

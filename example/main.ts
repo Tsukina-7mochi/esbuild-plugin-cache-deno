@@ -1,5 +1,5 @@
 import * as preact from 'preact';
-import * as semver from 'semver';
+import * as lodash from 'lodash';
 
 console.log(preact);
-console.log(semver);
+console.log(lodash);

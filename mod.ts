@@ -1,4 +1,5 @@
-import { esbuild, posix, sha256 } from './deps.ts';
+import { esbuild, fs, posix, sha256 } from './deps.ts';
+import requireNodeModule from './npm.ts';
 
 interface Importmap {
   imports?: { [key: string]: string };
@@ -39,6 +40,11 @@ interface RemoteCachePluginData {
   fileHash: string;
 }
 
+interface NpmCachePluginData {
+  asModule: boolean;
+  pkgStr: string;
+}
+
 const defaultLoaderRules: LoaderRules = [
   { test: /\.(c|m)?js$/, loader: 'js' },
   { test: /\.jsx$/, loader: 'jsx' },
@@ -58,9 +64,67 @@ const getRedirectedLocation = async function (url: string) {
   return res.headers.get('location');
 };
 
+const getNodePackagePath = async function(
+  importName: string,
+  dependencies: { [key: string]: string },
+  denoCacheDirectory: string
+) {
+  if(!(importName in dependencies)) {
+    return;
+  }
+  const pkgStr = dependencies[importName];
+  const [pkgName, pkgVersion] = decomposePackageNameVersion(pkgStr);
+
+  const cacheBasePath = posix.resolve(
+    denoCacheDirectory,
+    'npm',
+    'registry.npmjs.org',
+    pkgName,
+    pkgVersion
+  );
+
+  try {
+    const pkgJsonContent = await Deno.readTextFile(posix.join(cacheBasePath, 'package.json'));
+    const entryFileName = JSON.parse(pkgJsonContent).main;
+
+    if(typeof entryFileName !== 'string') {
+      return null;
+    }
+    return {
+      path: posix.join(cacheBasePath, entryFileName),
+      pkgStr
+    };
+  } catch {
+    if(await fs.exists(posix.join(cacheBasePath, 'package.json'))) {
+      return {
+        path: posix.join(cacheBasePath, 'index.json'),
+        pkgStr
+      };
+    }
+    return null;
+  }
+}
+
+/**
+ * @example "package@version" -> ["package", "version"]
+ * @example "package" -> ["package", ""]
+ * @example "@author/package@version" -> ["@author/package", "version"]
+ * @example "@author/package" -> ["@author/package", ""]
+ */
+const decomposePackageNameVersion = function (
+  pkgStr: string,
+): [string, string] {
+  const index = pkgStr.lastIndexOf('@');
+  if (index <= 0) {
+    return [pkgStr, ''];
+  } else {
+    return [pkgStr.slice(0, index), pkgStr.slice(index + 1)];
+  }
+};
+
 function esbuildCachePlugin(options: Options): esbuild.Plugin {
   const remoteCacheNamespace = 'net.ts7m.esbuild-cache-plugin.general';
-  // const npmCacheNamespace = 'net.ts7m.esbuild-cache-plugin.npm';
+  const npmCacheNamespace = 'net.ts7m.esbuild-cache-plugin.npm';
   const imports = options.importmap?.imports ?? {};
   const scope = options.importmap?.scopes ?? {};
 
@@ -119,7 +183,7 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
         const url = new URL(remoteUrl);
         const hashContext = new sha256.Sha256();
         const pathHash = hashContext.update(url.pathname).toString();
-        const cachePath = posix.join(
+        const cachePath = posix.resolve(
           options.denoCacheDirectory,
           'deps',
           url.protocol.slice(0, -1),
@@ -133,6 +197,67 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
           namespace: remoteCacheNamespace,
           pluginData: { loader, cachePath, fileHash },
         };
+      });
+
+      // resolve npm imports
+      build.onResolve({ filter: /^npm:/ }, async (args) => {
+        const pkg = await getNodePackagePath(
+          args.path.slice(4),
+          options.lockMap.npm.specifiers,
+          options.denoCacheDirectory
+        );
+
+        if(pkg === null || pkg === undefined) {
+          return null;
+        }
+
+        return {
+          path: pkg.path,
+          namespace: npmCacheNamespace,
+          pluginData: {
+            pkgStr: pkg.pkgStr,
+            asModule: true,
+          },
+        };
+      });
+
+      build.onResolve({ filter: /.*/, namespace: npmCacheNamespace }, async (args) => {
+        const pluginData = args.pluginData as NpmCachePluginData;
+
+        if(!pluginData.asModule) {
+          const nodePathResolveResult = await requireNodeModule(args.path, args.importer);
+
+          if(nodePathResolveResult !== null && nodePathResolveResult !== undefined) {
+            return {
+              ...nodePathResolveResult,
+              namespace: npmCacheNamespace,
+              pluginData: {
+                pkgStr: pluginData.pkgStr,
+                asModule: false,
+              },
+            };
+          }
+        }
+
+        // console.log(args);
+
+        const pkg = await getNodePackagePath(
+          args.path,
+          options.lockMap.npm.packages[pluginData.pkgStr]?.dependencies ?? {},
+          options.denoCacheDirectory
+        );
+        if(pkg !== null && pkg !== undefined) {
+          return {
+            path: pkg.path,
+            namespace: npmCacheNamespace,
+            pluginData: {
+              pkgStr: pkg.pkgStr,
+              asModule: false,
+            },
+          }
+        }
+
+        return null;
       });
 
       // verify the checksum of the cached file
@@ -160,6 +285,28 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
             };
           }
         },
+      );
+
+      // return the content with the appropriate loader
+      build.onLoad(
+        { filter: /.*/, namespace: npmCacheNamespace },
+        async (args) => {
+          const pluginData = args.pluginData as NpmCachePluginData;
+
+          if(posix.isAbsolute(args.path)) {
+            const contents = await Deno.readTextFile(args.path);
+            const loader = getLoader(args.path);
+
+            return {
+              contents,
+              loader,
+              pluginData: {
+                ...pluginData,
+                asModule: false,
+              },
+            };
+          }
+        }
       );
     },
   };
