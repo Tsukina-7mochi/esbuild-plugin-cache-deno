@@ -135,7 +135,7 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
         };
       });
 
-      // Verifie the checksum of the cached file
+      // Verify the checksum of the cached file
       // and return the content with the appropriate loader
       build.onLoad(
         { filter: /.*/, namespace: remoteCacheNamespace },
