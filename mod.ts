@@ -53,34 +53,17 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
             }
           }
 
-          return { path, namespace };
+          return build.resolve(path, {
+            kind: args.kind,
+          });
         });
       }
 
-      // npm import is not currently supported
-      build.onResolve({ filter: /^npm:/ }, (args) => {
-        return {
-          path: args.path,
-          warnings: [{
-            text: 'npm import is not supported by esbuild-cache-plugin',
-          }],
-        };
-      });
-
-      // Resolve all namespace-marked paths to URLs
-      build.onResolve({ filter: /.*/, namespace }, (args) => {
-        try {
-          return {
-            path: new URL(args.path).toString(),
-            namespace,
-          };
-        } catch {
-          return {
-            path: new URL(args.path, args.importer).toString(),
-            namespace,
-          };
-        }
-      });
+      // tag import paths starting with "http://", "https://"
+      build.onResolve({ filter: /^https?:\/\// }, (args) => ({
+        path: new URL(args.path).href,
+        namespace,
+      }));
 
       build.onLoad({ filter: /.*/, namespace }, async (args) => {
         const file = await Cache.cache(args.path);
