@@ -8,6 +8,13 @@
     "importmap/scope/": {
       "simple-module-1": "./importmap/scope/hello.ts",
       "simple-module-2": "./importmap/scope/world.ts"
+    },
+    "importmap/scope-priority/": {
+      "simple-module-1": "./importmap/scope/hello.ts",
+      "simple-module-2": "./importmap/scope/world.ts"
+    },
+    "importmap/scope-priority/sub/": {
+      "simple-module-1": "./importmap/scope-priority/hello.ts"
     }
   }
 }
