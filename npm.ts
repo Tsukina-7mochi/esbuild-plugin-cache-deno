@@ -1,6 +1,9 @@
 import { esbuild, posix, fs } from "./deps.ts";
 
-type OnResolveReturnType = esbuild.OnResolveResult | null | undefined;
+interface ModuleResolveResult {
+  name: string;
+  type: 'file' | 'core-module' | 'module';
+}
 
 const coreModules = [
   'assert',
@@ -49,11 +52,17 @@ const coreModules = [
   'zlib',
 ];
 
-const requireNodeModule = async function(moduleName: string, importer: string): Promise<OnResolveReturnType> {
+const requireNodeModule = async function(
+  moduleName: string,
+  importer: string,
+  modulesInScope: string[]
+): Promise<ModuleResolveResult | null> {
   const importerPath = posix.dirname(importer);
 
-  if(moduleName.startsWith('node:') || coreModules.includes(moduleName)) {
-    return { errors: [{ text: `Cannot bundle core module "${moduleName}"` }] };
+  if(moduleName.startsWith('node:')) {
+    return {name: moduleName.slice(5), type: 'core-module'};
+  } else if(coreModules.includes(moduleName)) {
+    return { name: moduleName, type: 'core-module' };
   }
 
   if(moduleName.startsWith('/')) {
@@ -65,53 +74,62 @@ const requireNodeModule = async function(moduleName: string, importer: string): 
     return await loadAsFile(posix.join(importerPath, moduleName))
       ?? await loadAsDirectory(posix.join(importerPath, moduleName));
   }
+
+  if(modulesInScope.includes(moduleName)) {
+    return { name: moduleName, type: 'module' };
+  }
+
+  return null;
 }
 
-const loadAsFile = async function(path: string): Promise<OnResolveReturnType> {
+const loadAsFile = async function(path: string): Promise<ModuleResolveResult | null> {
   // compleate extension
   if(await fs.exists(path, { isFile: true })) {
-    return { path };
+    return { name: path, type: 'file' };
   }
   if(await fs.exists(`${path}.js`, { isFile: true })) {
-    return { path: `${path}.js` };
+    return { name: `${path}.js`, type: 'file' };
   }
   if(await fs.exists(`${path}.json`, { isFile: true })) {
-    return { path: `${path}.json` };
+    return { name: `${path}.json`, type: 'file' };
   }
   if(await fs.exists(`${path}.node`, { isFile: true })) {
-    return { path: `${path}.node` };
+    return { name: `${path}.node`, type: 'file' };
   }
+
+  return null;
 }
 
-const loadIndex = async function(path: string): Promise<OnResolveReturnType> {
+const loadIndex = async function(path: string): Promise<ModuleResolveResult | null> {
   if(await fs.exists(posix.join(path, 'index.js'), { isFile: true })) {
-    return { path: posix.join(path, 'index.js') };
+    return { name: posix.join(path, 'index.js'), type: 'file' };
   }
   if(await fs.exists(posix.join(path, 'index.json'), { isFile: true })) {
-    return { path: posix.join(path, 'index.json') };
+    return { name: posix.join(path, 'index.json'), type: 'file' };
   }
-  if(await fs.exists(posix.join(path, 'index.json'), { isFile: true })) {
-    return { path: posix.join(path, 'index.node') };
+  if(await fs.exists(posix.join(path, 'index.node'), { isFile: true })) {
+    return { name: posix.join(path, 'index.node'), type: 'file' };
   }
+
+  return null;
 }
 
-const loadAsDirectory = async function(path: string): Promise<OnResolveReturnType> {
+const loadAsDirectory = async function(path: string): Promise<ModuleResolveResult | null> {
   const packageJsonPath = posix.join(path, 'package.json');
   if(!await fs.exists(packageJsonPath)) {
-    // load index
-  } else {
-    const content = await Deno.readTextFile(packageJsonPath);
-    const entry = JSON.parse(content).main;
-    if(typeof entry !== 'string') {
-      return;
-      // return index
-    }
-    const entryPath = posix.join(path, entry);
-
-    return await loadAsFile(entryPath)
-      ?? await loadIndex(entryPath)
-      ?? await loadIndex(path);
+    return loadIndex(path);
   }
+
+  const content = await Deno.readTextFile(packageJsonPath);
+  const entry = JSON.parse(content).main;
+  if(typeof entry !== 'string') {
+    return loadIndex(path);
+  }
+  const entryPath = posix.join(path, entry);
+
+  return await loadAsFile(entryPath)
+    ?? await loadIndex(entryPath)
+    ?? await loadIndex(path);
 }
 
 export default requireNodeModule;

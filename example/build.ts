@@ -23,6 +23,9 @@ const config: esbuild.BuildOptions = {
       lockMap,
       denoCacheDirectory: '/home/ts7m/.cache/deno',
       importmap,
+      npmModulePolyfill: {
+        'util': { loader: 'empty' }
+      }
     }),
   ],
 };

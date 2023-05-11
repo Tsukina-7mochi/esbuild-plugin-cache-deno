@@ -1,6 +1,9 @@
 import { esbuild, fs, posix, sha256 } from './deps.ts';
 import requireNodeModule from './npm.ts';
 
+type CustomOnResolveResult<PluginData>
+  = Partial<esbuild.OnResolveResult> | { pluginData: PluginData };
+
 interface Importmap {
   imports?: { [key: string]: string };
   scopes?: {
@@ -32,6 +35,9 @@ interface Options {
   denoCacheDirectory: string;
   importmap?: Importmap;
   loaderRules?: LoaderRules;
+  npmModulePolyfill?: {
+    [key: string]: { moduleName: string } | { loader: string };
+  };
 }
 
 interface RemoteCachePluginData {
@@ -41,8 +47,9 @@ interface RemoteCachePluginData {
 }
 
 interface NpmCachePluginData {
-  asModule: boolean;
+  asModule?: boolean;
   pkgStr: string;
+  loader?: esbuild.Loader | undefined;
 }
 
 const defaultLoaderRules: LoaderRules = [
@@ -64,45 +71,104 @@ const getRedirectedLocation = async function (url: string) {
   return res.headers.get('location');
 };
 
-const getNodePackagePath = async function(
-  importName: string,
-  dependencies: { [key: string]: string },
-  denoCacheDirectory: string
-) {
-  if(!(importName in dependencies)) {
-    return;
-  }
-  const pkgStr = dependencies[importName];
-  const [pkgName, pkgVersion] = decomposePackageNameVersion(pkgStr);
-
+const getNodeModulePath = async function(name: string, version: string, denoCacheDirectory: string) {
   const cacheBasePath = posix.resolve(
     denoCacheDirectory,
     'npm',
     'registry.npmjs.org',
-    pkgName,
-    pkgVersion
+    name,
+    version
   );
 
-  try {
-    const pkgJsonContent = await Deno.readTextFile(posix.join(cacheBasePath, 'package.json'));
-    const entryFileName = JSON.parse(pkgJsonContent).main;
+  // try to open package.json
+  const getPackageJsonMainField = () => Deno.readTextFile(posix.join(cacheBasePath, 'package.json'))
+    .then((fileContent) => JSON.parse(fileContent)['main'])
+    .then((mainField) => {
+      if(typeof mainField === 'string') {
+        return posix.join(cacheBasePath, mainField);
+      }
+    })
+    .catch(() => null);
 
-    if(typeof entryFileName !== 'string') {
-      return null;
-    }
-    return {
-      path: posix.join(cacheBasePath, entryFileName),
-      pkgStr
-    };
-  } catch {
-    if(await fs.exists(posix.join(cacheBasePath, 'package.json'))) {
-      return {
-        path: posix.join(cacheBasePath, 'index.json'),
-        pkgStr
-      };
-    }
+  const getFile = (filename: string) => Promise.resolve(posix.join(cacheBasePath, filename))
+    .then(async (path) => ({ path, exists: await fs.exists(path, { isFile: true }) }))
+    .then(({ path, exists }) => exists ? path : null);
+
+  return await getPackageJsonMainField()
+    ?? await getFile('index.js')
+    ?? await getFile('index.json')
+    ?? await getFile('index.node');
+}
+
+const resolveNodeModule = async function(
+  importName: string,
+  importer: string,
+  dependencies: { [key: string]: string },
+  denoCacheDirectory: string,
+  polyfills: {
+    [key: string]: { moduleName: string } | { loader: string };
+  },
+  asModule = false
+): Promise<CustomOnResolveResult<NpmCachePluginData> | null> {
+  const nodeModule = await requireNodeModule(
+    importName,
+    importer,
+    Object.keys(dependencies)
+  );
+
+  if(nodeModule === null) {
     return null;
   }
+
+  if(!asModule && nodeModule.type === 'file') {
+    return {
+      path: nodeModule.name,
+      pluginData: {}
+    };
+  } else if(asModule || nodeModule.type === 'core-module' || nodeModule.type === 'module') {
+
+    if(nodeModule.name in polyfills) {
+      const polyfill = polyfills[nodeModule.name];
+      if('moduleName' in polyfill) {
+        return await resolveNodeModule(
+          polyfill.moduleName,
+          importer,
+          dependencies,
+          denoCacheDirectory,
+          polyfills
+        );
+      } else {
+        return {
+          path: 'stub',
+          pluginData: { loader: polyfill.loader }
+        }
+      }
+    }
+
+    if(nodeModule.type === 'core-module') {
+      return { errors: [{ text: `Cannot bundle core module ${nodeModule.name}` }] };
+    }
+
+    const pkgStr = dependencies[nodeModule.name];
+    if(typeof pkgStr !== 'string') {
+      return null;
+    }
+
+    const [pkgName, pkgVersion] = decomposePackageNameVersion(pkgStr);
+    const modulePath = await getNodeModulePath(pkgName, pkgVersion, denoCacheDirectory);
+    if(typeof modulePath !== 'string') {
+      return null;
+    }
+
+    return {
+      path: modulePath,
+      pluginData: {
+        pkgStr: pkgStr
+      }
+    };
+  }
+
+  return null;
 }
 
 /**
@@ -127,6 +193,7 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
   const npmCacheNamespace = 'net.ts7m.esbuild-cache-plugin.npm';
   const imports = options.importmap?.imports ?? {};
   const scope = options.importmap?.scopes ?? {};
+  const npmModulePolyfill = options.npmModulePolyfill ?? {};
 
   const loaderRules = [
     ...(options.loaderRules ?? []),
@@ -159,6 +226,7 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
 
           return build.resolve(path, {
             kind: args.kind,
+            importer: args.importer,
           });
         });
       }
@@ -201,63 +269,40 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
 
       // resolve npm imports
       build.onResolve({ filter: /^npm:/ }, async (args) => {
-        const pkg = await getNodePackagePath(
-          args.path.slice(4),
-          options.lockMap.npm.specifiers,
-          options.denoCacheDirectory
-        );
-
-        if(pkg === null || pkg === undefined) {
-          return null;
-        }
-
         return {
-          path: pkg.path,
-          namespace: npmCacheNamespace,
-          pluginData: {
-            pkgStr: pkg.pkgStr,
-            asModule: true,
-          },
+          ...await resolveNodeModule(
+            args.path.slice(4),
+            args.importer,
+            options.lockMap.npm.specifiers,
+            options.denoCacheDirectory,
+            npmModulePolyfill
+          ),
+          namespace: npmCacheNamespace
         };
       });
 
       build.onResolve({ filter: /.*/, namespace: npmCacheNamespace }, async (args) => {
         const pluginData = args.pluginData as NpmCachePluginData;
+        const result = {
+          ...await resolveNodeModule(
+            args.path,
+            args.importer,
+            options.lockMap.npm.packages[pluginData.pkgStr]?.dependencies ?? {},
+            options.denoCacheDirectory,
+            npmModulePolyfill
+          ),
+          namespace: npmCacheNamespace,
+        };
 
-        if(!pluginData.asModule) {
-          const nodePathResolveResult = await requireNodeModule(args.path, args.importer);
-
-          if(nodePathResolveResult !== null && nodePathResolveResult !== undefined) {
-            return {
-              ...nodePathResolveResult,
-              namespace: npmCacheNamespace,
-              pluginData: {
-                pkgStr: pluginData.pkgStr,
-                asModule: false,
-              },
-            };
-          }
+        if('pluginData' in result) {
+          result.pluginData = {
+            ...pluginData,
+            ...result.pluginData,
+            asModule: false
+          };
         }
 
-        // console.log(args);
-
-        const pkg = await getNodePackagePath(
-          args.path,
-          options.lockMap.npm.packages[pluginData.pkgStr]?.dependencies ?? {},
-          options.denoCacheDirectory
-        );
-        if(pkg !== null && pkg !== undefined) {
-          return {
-            path: pkg.path,
-            namespace: npmCacheNamespace,
-            pluginData: {
-              pkgStr: pkg.pkgStr,
-              asModule: false,
-            },
-          }
-        }
-
-        return null;
+        return result;
       });
 
       // verify the checksum of the cached file
@@ -295,15 +340,18 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
 
           if(posix.isAbsolute(args.path)) {
             const contents = await Deno.readTextFile(args.path);
-            const loader = getLoader(args.path);
+            const loader = pluginData.loader ?? getLoader(args.path);
 
             return {
               contents,
               loader,
-              pluginData: {
-                ...pluginData,
-                asModule: false,
-              },
+              pluginData,
+            };
+          } else if(pluginData.loader === 'empty') {
+            return {
+              contents: '',
+              loader: pluginData.loader,
+              pluginData,
             };
           }
         }
