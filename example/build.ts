@@ -24,8 +24,8 @@ const config: esbuild.BuildOptions = {
       denoCacheDirectory: '/home/ts7m/.cache/deno',
       importmap,
       npmModulePolyfill: {
-        'util': { loader: 'empty' }
-      }
+        'util': { loader: 'empty' },
+      },
     }),
   ],
 };

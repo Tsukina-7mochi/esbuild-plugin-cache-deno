@@ -1,8 +1,9 @@
 import { esbuild, fs, posix, sha256 } from './deps.ts';
 import requireNodeModule from './npm.ts';
 
-type CustomOnResolveResult<PluginData>
-  = Partial<esbuild.OnResolveResult> | { pluginData: PluginData };
+type CustomOnResolveResult<PluginData> = Partial<esbuild.OnResolveResult> | {
+  pluginData: PluginData;
+};
 
 interface Importmap {
   imports?: { [key: string]: string };
@@ -71,36 +72,45 @@ const getRedirectedLocation = async function (url: string) {
   return res.headers.get('location');
 };
 
-const getNodeModulePath = async function(name: string, version: string, denoCacheDirectory: string) {
+const getNodeModulePath = async function (
+  name: string,
+  version: string,
+  denoCacheDirectory: string,
+) {
   const cacheBasePath = posix.resolve(
     denoCacheDirectory,
     'npm',
     'registry.npmjs.org',
     name,
-    version
+    version,
   );
 
   // try to open package.json
-  const getPackageJsonMainField = () => Deno.readTextFile(posix.join(cacheBasePath, 'package.json'))
-    .then((fileContent) => JSON.parse(fileContent)['main'])
-    .then((mainField) => {
-      if(typeof mainField === 'string') {
-        return posix.join(cacheBasePath, mainField);
-      }
-    })
-    .catch(() => null);
+  const getPackageJsonMainField = () =>
+    Deno.readTextFile(posix.join(cacheBasePath, 'package.json'))
+      .then((fileContent) => JSON.parse(fileContent)['main'])
+      .then((mainField) => {
+        if (typeof mainField === 'string') {
+          return posix.join(cacheBasePath, mainField);
+        }
+      })
+      .catch(() => null);
 
-  const getFile = (filename: string) => Promise.resolve(posix.join(cacheBasePath, filename))
-    .then(async (path) => ({ path, exists: await fs.exists(path, { isFile: true }) }))
-    .then(({ path, exists }) => exists ? path : null);
+  const getFile = (filename: string) =>
+    Promise.resolve(posix.join(cacheBasePath, filename))
+      .then(async (path) => ({
+        path,
+        exists: await fs.exists(path, { isFile: true }),
+      }))
+      .then(({ path, exists }) => exists ? path : null);
 
-  return await getPackageJsonMainField()
-    ?? await getFile('index.js')
-    ?? await getFile('index.json')
-    ?? await getFile('index.node');
-}
+  return await getPackageJsonMainField() ??
+    await getFile('index.js') ??
+    await getFile('index.json') ??
+    await getFile('index.node');
+};
 
-const resolveNodeModule = async function(
+const resolveNodeModule = async function (
   importName: string,
   importer: string,
   dependencies: { [key: string]: string },
@@ -108,68 +118,76 @@ const resolveNodeModule = async function(
   polyfills: {
     [key: string]: { moduleName: string } | { loader: string };
   },
-  asModule = false
+  asModule = false,
 ): Promise<CustomOnResolveResult<NpmCachePluginData> | null> {
   const nodeModule = await requireNodeModule(
     importName,
     importer,
-    Object.keys(dependencies)
+    Object.keys(dependencies),
   );
 
-  if(nodeModule === null) {
+  if (nodeModule === null) {
     return null;
   }
 
-  if(!asModule && nodeModule.type === 'file') {
+  if (!asModule && nodeModule.type === 'file') {
     return {
       path: nodeModule.name,
-      pluginData: {}
+      pluginData: {},
     };
-  } else if(asModule || nodeModule.type === 'core-module' || nodeModule.type === 'module') {
-
-    if(nodeModule.name in polyfills) {
+  } else if (
+    asModule || nodeModule.type === 'core-module' ||
+    nodeModule.type === 'module'
+  ) {
+    if (nodeModule.name in polyfills) {
       const polyfill = polyfills[nodeModule.name];
-      if('moduleName' in polyfill) {
+      if ('moduleName' in polyfill) {
         return await resolveNodeModule(
           polyfill.moduleName,
           importer,
           dependencies,
           denoCacheDirectory,
-          polyfills
+          polyfills,
         );
       } else {
         return {
           path: 'stub',
-          pluginData: { loader: polyfill.loader }
-        }
+          pluginData: { loader: polyfill.loader },
+        };
       }
     }
 
-    if(nodeModule.type === 'core-module') {
-      return { errors: [{ text: `Cannot bundle core module ${nodeModule.name}` }] };
+    if (nodeModule.type === 'core-module') {
+      return {
+        errors: [{ text: `Cannot bundle core module ${nodeModule.name}` }],
+      };
     }
 
     const pkgStr = dependencies[nodeModule.name];
-    if(typeof pkgStr !== 'string') {
+    if (typeof pkgStr !== 'string') {
       return null;
     }
 
     const [pkgName, pkgVersion] = decomposePackageNameVersion(pkgStr);
-    const modulePath = await getNodeModulePath(pkgName, pkgVersion, denoCacheDirectory);
-    if(typeof modulePath !== 'string') {
+    const modulePath = await getNodeModulePath(
+      pkgName,
+      pkgVersion,
+      denoCacheDirectory,
+    );
+    if (typeof modulePath !== 'string') {
       return null;
     }
 
     return {
       path: modulePath,
       pluginData: {
-        pkgStr: pkgStr
-      }
+        pkgStr: pkgStr,
+      },
     };
   }
 
   return null;
-}
+};
 
 /**
  * @example "package@version" -> ["package", "version"]
@@ -197,7 +215,7 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
   const lockMap = {
     remote: {},
     npm: { specifiers: {}, packages: {} },
-    ...options.lockMap
+    ...options.lockMap,
   };
 
   const loaderRules = [
@@ -279,35 +297,38 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
             args.importer,
             lockMap.npm.specifiers,
             options.denoCacheDirectory,
-            npmModulePolyfill
-          ),
-          namespace: npmCacheNamespace
-        };
-      });
-
-      build.onResolve({ filter: /.*/, namespace: npmCacheNamespace }, async (args) => {
-        const pluginData = args.pluginData as NpmCachePluginData;
-        const result = {
-          ...await resolveNodeModule(
-            args.path,
-            args.importer,
-            lockMap.npm.packages[pluginData.pkgStr]?.dependencies ?? {},
-            options.denoCacheDirectory,
-            npmModulePolyfill
+            npmModulePolyfill,
           ),
           namespace: npmCacheNamespace,
         };
-
-        if('pluginData' in result) {
-          result.pluginData = {
-            ...pluginData,
-            ...result.pluginData,
-            asModule: false
-          };
-        }
-
-        return result;
       });
+
+      build.onResolve(
+        { filter: /.*/, namespace: npmCacheNamespace },
+        async (args) => {
+          const pluginData = args.pluginData as NpmCachePluginData;
+          const result = {
+            ...await resolveNodeModule(
+              args.path,
+              args.importer,
+              lockMap.npm.packages[pluginData.pkgStr]?.dependencies ?? {},
+              options.denoCacheDirectory,
+              npmModulePolyfill,
+            ),
+            namespace: npmCacheNamespace,
+          };
+
+          if ('pluginData' in result) {
+            result.pluginData = {
+              ...pluginData,
+              ...result.pluginData,
+              asModule: false,
+            };
+          }
+
+          return result;
+        },
+      );
 
       // verify the checksum of the cached file
       // and return the content with the appropriate loader
@@ -342,7 +363,7 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
         async (args) => {
           const pluginData = args.pluginData as NpmCachePluginData;
 
-          if(posix.isAbsolute(args.path)) {
+          if (posix.isAbsolute(args.path)) {
             const contents = await Deno.readTextFile(args.path);
             const loader = pluginData.loader ?? getLoader(args.path);
 
@@ -351,14 +372,14 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
               loader,
               pluginData,
             };
-          } else if(pluginData.loader === 'empty') {
+          } else if (pluginData.loader === 'empty') {
             return {
               contents: '',
               loader: pluginData.loader,
               pluginData,
             };
           }
-        }
+        },
       );
     },
   };
