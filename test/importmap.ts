@@ -33,3 +33,32 @@ Deno.test(testName('Simple'), async () => {
     'true'
   );
 });
+
+Deno.test(testName('Path prefix'), async () => {
+  const denoCacheDirectory = await getDenoCacheDir();
+
+  try {
+    await esbuild.build({
+      entryPoints: ['./test/importmap/pathPrefix/main.ts'],
+      bundle: true,
+      outdir: './test/dist',
+      platform: 'browser',
+      plugins: [
+        esbuildCachePlugin({
+          lockMap,
+          importmap,
+          importmapBasePath: 'test/',
+          denoCacheDirectory,
+        }),
+      ],
+    });
+  } finally {
+    esbuild.stop();
+  }
+
+  asserts.assertEquals(
+    (await denoRunScript('./test/dist/main.js', ['-A']))?.trim(),
+    'true'
+  );
+});
+
