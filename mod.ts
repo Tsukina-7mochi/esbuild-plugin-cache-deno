@@ -13,8 +13,8 @@ interface Importmap {
 
 interface LockMap {
   version: '2';
-  remote: { [key: string]: string };
-  npm: {
+  remote?: { [key: string]: string };
+  npm?: {
     specifiers: { [key: string]: string };
     packages: {
       [key: string]: {
@@ -194,6 +194,11 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
   const imports = options.importmap?.imports ?? {};
   const scope = options.importmap?.scopes ?? {};
   const npmModulePolyfill = options.npmModulePolyfill ?? {};
+  const lockMap = {
+    remote: {},
+    npm: { specifiers: {}, packages: {} },
+    ...options.lockMap
+  };
 
   const loaderRules = [
     ...(options.loaderRules ?? []),
@@ -233,7 +238,6 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
 
       // listen import starts with "http" and "https"
       build.onResolve({ filter: /^https?:\/\// }, async (args) => {
-        const lockMap = options.lockMap;
         let remoteUrl = args.path;
         if (!(remoteUrl in lockMap.remote)) {
           // check if the redirect destination is in list
@@ -259,7 +263,7 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
           pathHash,
         );
         const loader = getLoader(remoteUrl);
-        const fileHash = options.lockMap.remote[remoteUrl];
+        const fileHash = lockMap.remote[remoteUrl];
         return {
           path: remoteUrl,
           namespace: remoteCacheNamespace,
@@ -273,7 +277,7 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
           ...await resolveNodeModule(
             args.path.slice(4),
             args.importer,
-            options.lockMap.npm.specifiers,
+            lockMap.npm.specifiers,
             options.denoCacheDirectory,
             npmModulePolyfill
           ),
@@ -287,7 +291,7 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
           ...await resolveNodeModule(
             args.path,
             args.importer,
-            options.lockMap.npm.packages[pluginData.pkgStr]?.dependencies ?? {},
+            lockMap.npm.packages[pluginData.pkgStr]?.dependencies ?? {},
             options.denoCacheDirectory,
             npmModulePolyfill
           ),
