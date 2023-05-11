@@ -1,0 +1,6 @@
+{
+  "imports": {
+    "simple-module-1": "./importmap/simple/hello.ts",
+    "simple-module-2": "./importmap/simple/world.ts"
+  }
+}

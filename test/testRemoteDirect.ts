@@ -1,7 +1,7 @@
-import { esbuild, asserts } from "../deps.ts";
-import esbuildCachePlugin from "../mod.ts";
+import { esbuild, asserts } from '../deps.ts';
+import esbuildCachePlugin from '../mod.ts';
+import { getDenoCacheDir, denoRunScript } from './util.ts';
 import lockMap from './lock.json' assert { type: 'json' };
-import { getDenoCacheDir, denoRunScript } from "./util.ts";
 
 const testName = (name: string) => `[remote-direct] ${name}`;
 
