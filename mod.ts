@@ -35,6 +35,7 @@ interface Options {
   lockMap: LockMap;
   denoCacheDirectory: string;
   importmap?: Importmap;
+  importmapBasePath?: string;
   loaderRules?: LoaderRules;
   npmModulePolyfill?: {
     [key: string]: { moduleName: string } | { loader: string };
@@ -210,7 +211,7 @@ const decomposePackageNameVersion = function (
 
 const resolvePathWithImportMap = function (
   map: { [key: string]: string },
-  path: string,
+  path: string
 ) {
   for (const key in map) {
     // keys can be used as prefix only when it ends with "/"
@@ -240,8 +241,8 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
   const imports = options.importmap?.imports ?? {};
   const _scopes = options.importmap?.scopes ?? {};
   const scopes = Object.keys(_scopes)
-    .map((path) => {
-      try {
+  .map((path) => {
+    try {
         const url = new URL(path);
         return {
           path,
@@ -259,6 +260,7 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
       }
     })
     .toSorted((a, b) => b.pathSegments.length - a.pathSegments.length);
+  const importmapBasePath = posix.resolve(options.importmapBasePath ?? '.');
   const npmModulePolyfill = options.npmModulePolyfill ?? {};
   const lockMap = {
     remote: {},
@@ -310,6 +312,7 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
           return build.resolve(path, {
             kind: args.kind,
             importer: args.importer,
+            resolveDir: importmapBasePath
           });
         });
       }

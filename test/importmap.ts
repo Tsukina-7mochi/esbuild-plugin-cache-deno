@@ -19,6 +19,7 @@ Deno.test(testName('Simple'), async () => {
         esbuildCachePlugin({
           lockMap,
           importmap,
+          importmapBasePath: 'test/',
           denoCacheDirectory,
         }),
       ],
