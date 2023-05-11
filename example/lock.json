@@ -2,9 +2,12 @@
   "version": "2",
   "remote": {
     "https://esm.sh/preact@10.13.2": "5ebf0838bbc3c32fc6e78a4cd9dd672f2c36386d0595815d721a6b0941278488",
+    "https://esm.sh/preact@8.5.3": "ef4442ddc988b77592fb826e091ab0f45dd483835ad0c5179b2fd220f66e4855",
     "https://esm.sh/stable/preact@10.13.2/deno/preact.mjs": "365fab897381f4f403f859c5d12939084560545567108cc90dae901bbe892578",
+    "https://esm.sh/stable/preact@8.5.3/deno/preact.mjs": "4f4e7f3e5fb5b15294ab6ce5086fe8cdb728245b504aca693edc399e59c4f60d",
     "https://esm.sh/v118/preact@10.13.2/src/index.d.ts": "65398710de6aa0a07412da79784e05e6e96763f51c7c91b77344d2d0af06385c",
-    "https://esm.sh/v118/preact@10.13.2/src/jsx.d.ts": "9ac9b82c199fa7b04748807d750eba1a106c0be52041b8617416f88d6fc0a257"
+    "https://esm.sh/v118/preact@10.13.2/src/jsx.d.ts": "9ac9b82c199fa7b04748807d750eba1a106c0be52041b8617416f88d6fc0a257",
+    "https://esm.sh/v118/preact@8.5.3/dist/preact.d.ts": "f107fb4b97735e91aa307b78931174273db9e498437657b5cbb3ff009f06982e"
   },
   "npm": {
     "specifiers": {

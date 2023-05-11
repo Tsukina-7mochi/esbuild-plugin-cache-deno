@@ -5,7 +5,7 @@
     "semver": "npm:semver"
   },
   "scopes": {
-    "example/someDir": {
+    "someDir/": {
       "preact": "https://esm.sh/preact@8"
     }
   }
