@@ -211,7 +211,7 @@ const decomposePackageNameVersion = function (
 
 const resolvePathWithImportMap = function (
   map: { [key: string]: string },
-  path: string
+  path: string,
 ) {
   for (const key in map) {
     // keys can be used as prefix only when it ends with "/"
@@ -241,8 +241,8 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
   const imports = options.importmap?.imports ?? {};
   const _scopes = options.importmap?.scopes ?? {};
   const scopes = Object.keys(_scopes)
-  .map((path) => {
-    try {
+    .map((path) => {
+      try {
         const url = new URL(path);
         return {
           path,
@@ -260,6 +260,7 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
       }
     })
     .toSorted((a, b) => b.pathSegments.length - a.pathSegments.length);
+
   const importmapBasePath = posix.resolve(options.importmapBasePath ?? '.');
   const npmModulePolyfill = options.npmModulePolyfill ?? {};
   const lockMap = {
@@ -295,14 +296,22 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
           for (const scope of scopes) {
             if (scope.isFullUrl) {
               if (args.importer.startsWith(scope.path)) {
-                path = resolvePathWithImportMap(scope.map, args.path) ?? path;
+                const resolved = resolvePathWithImportMap(scope.map, args.path);
+                if (typeof resolved === 'string') {
+                  path = resolved;
+                  break;
+                }
               }
             } else {
               if (
                 args.importer.includes(`/${scope.pathSegments.join('/')}/`) ||
                 args.importer.endsWith(`/${scope.pathSegments.join('/')}`)
               ) {
-                path = resolvePathWithImportMap(scope.map, args.path) ?? path;
+                const resolved = resolvePathWithImportMap(scope.map, args.path);
+                if (typeof resolved === 'string') {
+                  path = resolved;
+                  break;
+                }
               }
             }
           }
@@ -314,7 +323,7 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
           return build.resolve(path, {
             kind: args.kind,
             importer: args.importer,
-            resolveDir: importmapBasePath
+            resolveDir: importmapBasePath,
           });
         });
       }
