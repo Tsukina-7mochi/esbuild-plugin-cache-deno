@@ -38,6 +38,7 @@
     "useTabs": false
   },
   "tasks": {
-    "build": "deno run -A ./example/build.ts"
+    "build": "deno run -A ./example/build.ts",
+    "test": "bash ./scripts/cache-test-scripts.sh && deno test -A"
   }
 }

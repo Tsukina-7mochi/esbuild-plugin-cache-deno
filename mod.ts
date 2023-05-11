@@ -13,7 +13,7 @@ interface Importmap {
 }
 
 interface LockMap {
-  version: '2';
+  version: string;
   remote?: { [key: string]: string };
   npm?: {
     specifiers: { [key: string]: string };
@@ -207,6 +207,12 @@ const decomposePackageNameVersion = function (
 };
 
 function esbuildCachePlugin(options: Options): esbuild.Plugin {
+  if (options.lockMap.version !== '2') {
+    throw Error(
+      `Lock map version ${options.lockMap.version} is not supported.`,
+    );
+  }
+
   const remoteCacheNamespace = 'net.ts7m.esbuild-cache-plugin.general';
   const npmCacheNamespace = 'net.ts7m.esbuild-cache-plugin.npm';
   const imports = options.importmap?.imports ?? {};
@@ -264,7 +270,9 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
             return null;
           }
           if (!(redirectLocation in lockMap.remote)) {
-            return null;
+            return {
+              warnings: [{ text: `${args.path} not found in lock map` }],
+            };
           }
 
           remoteUrl = redirectLocation;
