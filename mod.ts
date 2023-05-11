@@ -286,7 +286,9 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
     setup(build) {
       // resolve based on import map
       for (const importName in imports) {
-        const filter = new RegExp(`^${importName}$`, 'i');
+        const filter = importName.endsWith('/')
+          ? new RegExp(`^${importName}`, 'i')
+          : new RegExp(`^${importName}$`, 'i');
         build.onResolve({ filter }, (args) => {
           let path = resolvePathWithImportMap(imports, args.path);
 
