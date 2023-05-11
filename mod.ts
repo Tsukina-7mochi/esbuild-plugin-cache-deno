@@ -65,6 +65,8 @@ const defaultLoaderRules: LoaderRules = [
 
 const getRedirectedLocation = async function (url: string) {
   const res = await fetch(url, { redirect: 'manual' });
+  // Close response body to prevent resource leakage
+  await res.body?.cancel();
   if (res.status !== 302) {
     return null;
   }
