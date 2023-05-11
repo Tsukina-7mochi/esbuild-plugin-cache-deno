@@ -3,5 +3,11 @@
     "simple-module-1": "./importmap/simple/hello.ts",
     "simple-module-2": "./importmap/simple/world.ts",
     "simple/": "./importmap/simple/"
+  },
+  "scopes": {
+    "importmap/scope/": {
+      "simple-module-1": "./importmap/scope/hello.ts",
+      "simple-module-2": "./importmap/scope/world.ts"
+    }
   }
 }
