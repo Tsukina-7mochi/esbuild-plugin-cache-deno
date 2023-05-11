@@ -39,6 +39,6 @@
   },
   "tasks": {
     "build": "bash ./example/cache.sh && deno run -A ./example/build.ts",
-    "test": "bash ./scripts/cache-test-scripts.sh && deno test -A"
+    "test": "bash ./test/cache.sh && deno test -A"
   }
 }
