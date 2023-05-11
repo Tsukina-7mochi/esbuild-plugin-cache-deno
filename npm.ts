@@ -83,7 +83,7 @@ const requireNodeModule = async function(
 }
 
 const loadAsFile = async function(path: string): Promise<ModuleResolveResult | null> {
-  // compleate extension
+  // complete extension
   if(await fs.exists(path, { isFile: true })) {
     return { name: path, type: 'file' };
   }

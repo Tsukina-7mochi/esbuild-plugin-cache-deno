@@ -211,7 +211,7 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
   return {
     name: 'esbuild-cache-plugin',
     setup(build) {
-      // resolve baseed on import map
+      // resolve based on import map
       for (const importName in imports) {
         const filter = new RegExp(`^${importName}$`, 'i');
         build.onResolve({ filter }, (args) => {
