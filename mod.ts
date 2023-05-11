@@ -206,6 +206,26 @@ const decomposePackageNameVersion = function (
   }
 };
 
+const resolvePathWithImportMap = function (
+  map: { [key: string]: string },
+  path: string,
+) {
+  for (const key in map) {
+    // keys can be used as prefix only when it ends with "/"
+    if (key.endsWith('/')) {
+      if (path.startsWith(key)) {
+        return map[key] + path.slice(key.length);
+      }
+    } else {
+      if (path === key) {
+        return map[key];
+      }
+    }
+  }
+
+  return null;
+};
+
 function esbuildCachePlugin(options: Options): esbuild.Plugin {
   if (options.lockMap.version !== '2') {
     throw Error(
@@ -216,7 +236,27 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
   const remoteCacheNamespace = 'net.ts7m.esbuild-cache-plugin.general';
   const npmCacheNamespace = 'net.ts7m.esbuild-cache-plugin.npm';
   const imports = options.importmap?.imports ?? {};
-  const scope = options.importmap?.scopes ?? {};
+  const _scopes = options.importmap?.scopes ?? {};
+  const scopes = Object.keys(_scopes)
+    .map((path) => {
+      try {
+        const url = new URL(path);
+        return {
+          path,
+          isFullUrl: true,
+          pathSegments: url.pathname.split('/').filter((v) => v.length > 0),
+          map: _scopes[path],
+        };
+      } catch {
+        return {
+          path,
+          isFullUrl: false,
+          pathSegments: path.split('/').filter((v) => v.length > 0),
+          map: _scopes[path],
+        };
+      }
+    })
+    .toSorted((a, b) => b.pathSegments.length - a.pathSegments.length);
   const npmModulePolyfill = options.npmModulePolyfill ?? {};
   const lockMap = {
     remote: {},
@@ -244,13 +284,25 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
       for (const importName in imports) {
         const filter = new RegExp(`^${importName}$`, 'i');
         build.onResolve({ filter }, (args) => {
-          let path = imports[args.path];
-          for (const scopePath in scope) {
-            if (!posix.relative(scopePath, args.importer).startsWith('..')) {
-              if (args.path in scope[scopePath]) {
-                path = scope[scopePath][args.path];
+          let path = resolvePathWithImportMap(imports, args.path);
+
+          for (const scope of scopes) {
+            if (scope.isFullUrl) {
+              if (args.importer.startsWith(scope.path)) {
+                path = resolvePathWithImportMap(scope.map, args.path) ?? path;
+              }
+            } else {
+              if (
+                args.importer.includes(`/${scope.pathSegments.join('/')}/`) ||
+                args.importer.endsWith(`/${scope.pathSegments.join('/')}`)
+              ) {
+                path = resolvePathWithImportMap(scope.map, args.path) ?? path;
               }
             }
+          }
+
+          if (path === null) {
+            return null;
           }
 
           return build.resolve(path, {
