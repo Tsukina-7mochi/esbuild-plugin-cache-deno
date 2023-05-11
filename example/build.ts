@@ -1,8 +1,7 @@
 import { esbuild } from '../deps.ts';
 import esbuildCachePlugin from '../mod.ts';
 import importmap from './import_map.json' assert { type: 'json' };
-
-const lockMap = JSON.parse(Deno.readTextFileSync('deno.lock'));
+import lockMap from './lock.json' assert { type: 'json' };
 
 const config: esbuild.BuildOptions = {
   entryPoints: [

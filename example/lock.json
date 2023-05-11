@@ -1,0 +1,37 @@
+{
+  "version": "2",
+  "remote": {
+    "https://esm.sh/preact@10.13.2": "5ebf0838bbc3c32fc6e78a4cd9dd672f2c36386d0595815d721a6b0941278488",
+    "https://esm.sh/stable/preact@10.13.2/deno/preact.mjs": "365fab897381f4f403f859c5d12939084560545567108cc90dae901bbe892578",
+    "https://esm.sh/v118/preact@10.13.2/src/index.d.ts": "65398710de6aa0a07412da79784e05e6e96763f51c7c91b77344d2d0af06385c",
+    "https://esm.sh/v118/preact@10.13.2/src/jsx.d.ts": "9ac9b82c199fa7b04748807d750eba1a106c0be52041b8617416f88d6fc0a257"
+  },
+  "npm": {
+    "specifiers": {
+      "lodash": "lodash@4.17.21",
+      "semver": "semver@7.5.0"
+    },
+    "packages": {
+      "lodash@4.17.21": {
+        "integrity": "sha512-v2kDEe57lecTulaDIuNTPy3Ry4gLGJ6Z1O3vE1krgXZNrsQ+LFTGHVxVjcXPs17LhbZVGedAJv8XZ1tvj5FvSg==",
+        "dependencies": {}
+      },
+      "lru-cache@6.0.0": {
+        "integrity": "sha512-Jo6dJ04CmSjuznwJSS3pUeWmd/H0ffTlkXXgwZi+eq1UCmqQwCh+eLsYOYCwY991i2Fah4h1BEMCx4qThGbsiA==",
+        "dependencies": {
+          "yallist": "yallist@4.0.0"
+        }
+      },
+      "semver@7.5.0": {
+        "integrity": "sha512-+XC0AD/R7Q2mPSRuy2Id0+CGTZ98+8f+KvwirxOKIEyid+XSx6HbC63p+O4IndTHuX5Z+JxQ0TghCkO5Cg/2HA==",
+        "dependencies": {
+          "lru-cache": "lru-cache@6.0.0"
+        }
+      },
+      "yallist@4.0.0": {
+        "integrity": "sha512-3wdGidZyq5PB084XLES5TpOSRA3wjXAlIWMhum2kRcv/41Sn2emQ0dycQW4uZXLejwKvg6EsvbdlVL+FYEct7A==",
+        "dependencies": {}
+      }
+    }
+  }
+}
