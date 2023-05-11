@@ -57,6 +57,32 @@ Deno.test(testName('CDN #2'), async () => {
   );
 });
 
+Deno.test(testName('CDN #3 (redirect)'), async () => {
+  const denoCacheDirectory = await getDenoCacheDir();
+
+  try {
+    await esbuild.build({
+      entryPoints: ['./test/remote-direct/cdn3.ts'],
+      bundle: true,
+      outdir: './test/dist',
+      platform: 'browser',
+      plugins: [
+        esbuildCachePlugin({
+          lockMap,
+          denoCacheDirectory,
+        }),
+      ],
+    });
+  } finally {
+    esbuild.stop();
+  }
+
+  asserts.assertEquals(
+    (await denoRunScript('./test/dist/cdn3.js', ['-A']))?.trim(),
+    'true'
+  );
+});
+
 Deno.test(testName('npm #1'), async () => {
   const denoCacheDirectory = await getDenoCacheDir();
 
