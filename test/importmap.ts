@@ -117,3 +117,31 @@ Deno.test(testName('Scope priority'), async () => {
     'true'
   );
 });
+
+Deno.test(testName('Remote key'), async () => {
+  const denoCacheDirectory = await getDenoCacheDir();
+
+  try {
+    await esbuild.build({
+      entryPoints: ['./test/importmap/remote-key/main.ts'],
+      bundle: true,
+      outdir: './test/dist',
+      platform: 'browser',
+      plugins: [
+        esbuildCachePlugin({
+          lockMap,
+          importmap,
+          importmapBasePath: 'test/',
+          denoCacheDirectory,
+        }),
+      ],
+    });
+  } finally {
+    esbuild.stop();
+  }
+
+  asserts.assertEquals(
+    (await denoRunScript('./test/dist/main.js', ['-A']))?.trim(),
+    'true'
+  );
+});

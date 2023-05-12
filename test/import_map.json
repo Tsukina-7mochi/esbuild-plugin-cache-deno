@@ -2,7 +2,8 @@
   "imports": {
     "simple-module-1": "./importmap/simple/hello.ts",
     "simple-module-2": "./importmap/simple/world.ts",
-    "simple/": "./importmap/simple/"
+    "simple/": "./importmap/simple/",
+    "https://esm.sh/stable/react@16.14.0/deno/react.mjs": "https://esm.sh/stable/react@18.2.0/deno/react.mjs"
   },
   "scopes": {
     "importmap/scope/": {
