@@ -3,6 +3,8 @@ import esbuildCachePlugin from '../mod.ts';
 import importmap from './import_map.json' assert { type: 'json' };
 import lockMap from './lock.json' assert { type: 'json' };
 
+const denoPath = Deno.args[0];
+
 const config: esbuild.BuildOptions = {
   entryPoints: [
     {
@@ -20,7 +22,7 @@ const config: esbuild.BuildOptions = {
   plugins: [
     esbuildCachePlugin({
       lockMap,
-      denoCacheDirectory: '/home/ts7m/.cache/deno',
+      denoCacheDirectory: denoPath,
       importmap,
       npmModulePolyfill: {
         'util': { loader: 'empty' },
