@@ -38,7 +38,7 @@
     "useTabs": false
   },
   "tasks": {
-    "build": "bash ./example/cache.sh && deno run -A ./example/build.ts $HOME/.cache/deno",
+    "build": "bash ./example/cache.sh && deno run -A ./example/build.ts",
     "test": "bash ./test/cache.sh && deno test -A"
   }
 }

@@ -3,7 +3,7 @@ import esbuildCachePlugin from '../mod.ts';
 import importmap from './import_map.json' assert { type: 'json' };
 import lockMap from './lock.json' assert { type: 'json' };
 
-const denoPath = Deno.args[0];
+const denoPath = await esbuildCachePlugin.util.getDenoDir();
 
 const config: esbuild.BuildOptions = {
   entryPoints: [
