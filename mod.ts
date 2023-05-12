@@ -1,10 +1,6 @@
 import { esbuild, fs, posix, sha256 } from './deps.ts';
 import requireNodeModule from './npm.ts';
 
-type CustomOnResolveResult<PluginData> = Partial<esbuild.OnResolveResult> | {
-  pluginData: PluginData;
-};
-
 interface Importmap {
   imports?: { [key: string]: string };
   scopes?: {
@@ -52,6 +48,7 @@ interface NpmCachePluginData {
   asModule?: boolean;
   pkgStr: string;
   loader?: esbuild.Loader | undefined;
+  requireResolve?: boolean;
 }
 
 const defaultLoaderRules: LoaderRules = [
@@ -122,7 +119,7 @@ const resolveNodeModule = async function (
     [key: string]: { moduleName: string } | { loader: string };
   },
   asModule = false,
-): Promise<CustomOnResolveResult<NpmCachePluginData> | null> {
+): Promise<esbuild.OnResolveResult | null> {
   const nodeModule = await requireNodeModule(
     importName,
     importer,
@@ -145,13 +142,10 @@ const resolveNodeModule = async function (
     if (nodeModule.name in polyfills) {
       const polyfill = polyfills[nodeModule.name];
       if ('moduleName' in polyfill) {
-        return await resolveNodeModule(
-          polyfill.moduleName,
-          importer,
-          dependencies,
-          denoCacheDirectory,
-          polyfills,
-        );
+        return {
+          path: polyfill.moduleName,
+          pluginData: { requireResolve: true },
+        };
       } else {
         return {
           path: 'stub',
@@ -367,14 +361,27 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
 
       // resolve npm imports
       build.onResolve({ filter: /^npm:/ }, async (args) => {
+        const result = await resolveNodeModule(
+          args.path.slice(4),
+          args.importer,
+          lockMap.npm.specifiers,
+          options.denoCacheDirectory,
+          npmModulePolyfill,
+        );
+        if(result === null || (typeof result.path !== 'string')) {
+          return null;
+        }
+
+        if(result.pluginData?.requireResolve) {
+          return await build.resolve(result.path, {
+            importer: args.importer,
+            kind: args.kind,
+            resolveDir: '.',
+          });
+        }
+
         return {
-          ...await resolveNodeModule(
-            args.path.slice(4),
-            args.importer,
-            lockMap.npm.specifiers,
-            options.denoCacheDirectory,
-            npmModulePolyfill,
-          ),
+          ...result,
           namespace: npmCacheNamespace,
         };
       });
@@ -383,14 +390,26 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
         { filter: /.*/, namespace: npmCacheNamespace },
         async (args) => {
           const pluginData = args.pluginData as NpmCachePluginData;
+          const _result = await resolveNodeModule(
+            args.path,
+            args.importer,
+            lockMap.npm.packages[pluginData.pkgStr]?.dependencies ?? {},
+            options.denoCacheDirectory,
+            npmModulePolyfill,
+          );
+          if(_result === null || (typeof _result.path !== 'string')) {
+            return null;
+          }
+          if(_result.pluginData?.requireResolve) {
+            return await build.resolve(_result.path, {
+              importer: args.importer,
+              kind: args.kind,
+              resolveDir: '.',
+            });
+          }
+
           const result = {
-            ...await resolveNodeModule(
-              args.path,
-              args.importer,
-              lockMap.npm.packages[pluginData.pkgStr]?.dependencies ?? {},
-              options.denoCacheDirectory,
-              npmModulePolyfill,
-            ),
+            ..._result,
             namespace: npmCacheNamespace,
           };
 
