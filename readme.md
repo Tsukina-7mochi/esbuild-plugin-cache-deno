@@ -1,6 +1,6 @@
-# Esbuild Cache Plugin for Deno
+# esbuild Cache Plugin for Deno
 
-Esbuild Cache Plugin for Deno is an esbuild plugin to resolve remote (http/https) and even npm modules using Deno's cache.
+esbuild Cache Plugin for Deno is an esbuild plugin to resolve remote (http/https) and even npm modules using Deno's cache.
 
 ## Features
 
@@ -9,16 +9,18 @@ Esbuild Cache Plugin for Deno is an esbuild plugin to resolve remote (http/https
   - Of course resolving `import`s and `require`s in the npm module.
   - Supports polyfill for npm modules.
 - Resolves [importmaps](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script/type/importmap).
+- Customizing loader of remote files.
 
-## Examlpe
+## Usage
+
+### Minimum Example
 
 ```typescript
-import { esbuild } from '../deps.ts';
-import esbuildCachePlugin from '../mod.ts';
-import importmap from './import_map.json' assert { type: 'json' };
+import { esbuild } from 'https://deno.land/x/esbuild';
+import esbuildCachePlugin from 'https://deno.land/x/esbuild_plugin_cache_deno';
 import lockMap from './lock.json' assert { type: 'json' };
 
-// to use deno.lock file, you should parse the file manually
+// To use deno.lock file, you should parse the file manually
 // const lockMap = JSON.parse(Deno.readTextFileSync('./deno.lock'));
 
 const config: esbuild.BuildOptions = {
@@ -29,11 +31,7 @@ const config: esbuild.BuildOptions = {
   plugins: [
     esbuildCachePlugin({
       lockMap,
-      denoCacheDirectory: '/home/ts7m/.cache/deno',
-      importmap,
-      npmModulePolyfill: {
-        'util': { loader: 'empty' },
-      },
+      denoCacheDirectory: '/home/[user]/.cache/deno'
     }),
   ],
 };
@@ -41,56 +39,125 @@ const config: esbuild.BuildOptions = {
 await esbuild.build(config);
 
 esbuild.stop();
-
 ```
 
-## Example
+And don't forget to cache `src/main.ts` with Deno:
+
+```shell
+$deno cache --lock=./test/lock.json --lock-write ./src/main.ts
+# or to use deno.lock:
+# $deno cache ./src/main.ts
+```
+
+The you can use remote imports like:
 
 ```typescript
-import esbuild from 'esbuild';
-import esbuildCachePlugin from 'esbuild-cache-plugin';
+// src/main.ts
+import * as react from "https://esm.sh/react";
 
-await esbuild.build([
-    entryPoints: ['app.js'],
-    bundle: true,
-    outfile: 'out.js',
-    plugins: [
-        esbuildCachePlugin({
-            directory: cachePath,
-            importmap: {
-                imports: {
-                    "preact": "https://esm.sh/preact@10.13.2"
-                }
-            },
-            rules: [
-                {
-                    test: /\.css$/,
-                    loader: 'css'
-                }
-            ],
-        }),
-    ],
-]);
+console.log(react.version);
 ```
 
-## Options
+### Getting Deno's Cache Path
+
+There's a utility function to get `DENO_PATH` from output of `deno info` command and you can use the pass as `denoCacheDirectory`.
 
 ```typescript
-interface Options {
-  directory?: string;
-  importmap: Importmap;
-  rules?: [{
-    test: RegExp;
-    loader: Loader | string;
-  }];
-}
+const denoPath = await esbuildCachePlugin.util.getDenoDir();
 ```
 
-- `directory`: location where cache files are created
-- `importmap`:
-  [importmap](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script/type/importmap)
-  for resolve import
-- `rules`: Rules for loader selection based on file name
-  - `test`: `RegExp` object to test file name
-  - `loader` a loader used to load file (default:
-    [esbuild default](https://esbuild.github.io/plugins/#on-load-results))
+Alternatively, you can pass them from CLI argument using shell scripts.
+
+### Using NPM Modules
+
+You can use npm modules just like using them in Deno:
+
+```typescript
+// src/main.ts
+import * as react from "npm:react";
+
+console.log(react.version);
+```
+
+You can use polyfill to replace or remove some modules like Node.js's core modules.
+
+```typescript
+esbuildCachePlugin({
+  lockMap,
+  denoCacheDirectory: '/home/[user]/.cache/deno',
+  npmModulePolyfill: {
+    // replace "http" module
+    http: { moduleName: '/src/polyfill/http.ts' },
+    // remove "util" module
+    util: { loader: 'empty' },
+  },
+}),
+```
+
+### Using Import Maps
+
+You can pass [import maps](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script/type/importmap) with `importmap` option.
+
+```typescript
+esbuildCachePlugin({
+  lockMap,
+  denoCacheDirectory: '/home/[user]/.cache/deno',
+  importmap: {
+    imports: {
+      react: "https://esm.sh/react",
+    },
+  },
+}),
+```
+
+Then you can use the module specifier like:
+
+```typescript
+// src/main.ts
+import * as react from "react";
+
+console.log(react.version);
+```
+
+Of cause you can use your import maps you're using for the intellisense:
+
+```typescript
+import importmap from './import_map.json' assert type { type: 'json' };
+
+// ...
+
+esbuildCachePlugin({
+  lockMap,
+  denoCacheDirectory: '/home/[user]/.cache/deno',
+  importmap,
+}),
+```
+
+Also you can disguise import map's path for import maps not located in the CWD:
+
+```typescript
+import importmap from './src/import_map.json' assert type { type: 'json' };
+
+// ...
+
+esbuildCachePlugin({
+  lockMap,
+  denoCacheDirectory: '/home/[user]/.cache/deno',
+  importmap,
+  importmapBasePath: 'src/',
+}),
+```
+
+### Customizing loaders
+
+You can specify loaders for files with `loaderRules` option. The plugin uses default loader as the esbuild, you may not need to use this option.
+
+```typescript
+esbuildCachePlugin({
+  lockMap,
+  denoCacheDirectory: '/home/[user]/.cache/deno',
+  loaderRules: [
+    { test: /\.css$/, loader: 'css' },
+  ],
+}),
+```
