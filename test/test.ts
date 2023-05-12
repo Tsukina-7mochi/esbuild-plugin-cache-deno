@@ -1,2 +1,2 @@
 import './testRemoteDirect.ts';
-import './importmap.ts';
+import './testImportmap.ts';
