@@ -1,6 +1,48 @@
-# esbuild-cache-plugin for Deno
+# Esbuild Cache Plugin for Deno
 
-An esbuild plugin to cache HTTP/HTTPS imports for Deno.
+Esbuild Cache Plugin for Deno is an esbuild plugin to resolve remote (http/https) and even npm modules using Deno's cache.
+
+## Features
+
+- Resolves http/https imports to Deno's cache.
+- Resolves npm module imports to Deno's cache.
+  - Of course resolving `import`s and `require`s in the npm module.
+  - Supports polyfill for npm modules.
+- Resolves [importmaps](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script/type/importmap).
+
+## Examlpe
+
+```typescript
+import { esbuild } from '../deps.ts';
+import esbuildCachePlugin from '../mod.ts';
+import importmap from './import_map.json' assert { type: 'json' };
+import lockMap from './lock.json' assert { type: 'json' };
+
+// to use deno.lock file, you should parse the file manually
+// const lockMap = JSON.parse(Deno.readTextFileSync('./deno.lock'));
+
+const config: esbuild.BuildOptions = {
+  entryPoints: [ 'src/main.ts' ],
+  bundle: true,
+  outdir: './dist',
+  platform: 'browser',
+  plugins: [
+    esbuildCachePlugin({
+      lockMap,
+      denoCacheDirectory: '/home/ts7m/.cache/deno',
+      importmap,
+      npmModulePolyfill: {
+        'util': { loader: 'empty' },
+      },
+    }),
+  ],
+};
+
+await esbuild.build(config);
+
+esbuild.stop();
+
+```
 
 ## Example
 

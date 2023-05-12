@@ -461,6 +461,8 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
   };
 }
 
+import * as util from './util.ts';
+esbuildCachePlugin.util = util;
 export { esbuildCachePlugin };
 
 export default esbuildCachePlugin;
