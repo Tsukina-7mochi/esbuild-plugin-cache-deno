@@ -1,6 +1,6 @@
 {
   "imports": {
-    "preact": "https://esm.sh/preact@10",
+    "preact": "https://esm.sh/preact@10.13",
     "lodash": "npm:lodash",
     "semver": "npm:semver"
   },
