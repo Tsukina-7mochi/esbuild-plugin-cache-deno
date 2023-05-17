@@ -1,6 +1,7 @@
 import { sha256 } from "../deps.ts";
 import type { ModuleScope, ModuleFilePath } from "./types.ts";
 import ImportmapResolver from "./importmap.ts";
+import { urlHashAndSearchRemoved, urlIsDescendant } from "./util.ts";
 
 class HttpModuleScope implements ModuleScope {
   root: URL;
@@ -18,7 +19,11 @@ class HttpModuleScope implements ModuleScope {
     this.importmapResolver = importmapResolver ?? null;
   }
 
-  resolve(moduleName: string, basePath: string) {
+  resolve(moduleName: string, baseUrl: URL) {
+    if(!urlIsDescendant(this.root, baseUrl)) {
+      throw Error('base URL must be descendant of scope root.');
+    }
+
     let url = null;
     try {
       url = new URL(moduleName);
@@ -29,7 +34,7 @@ class HttpModuleScope implements ModuleScope {
     }if(moduleName.startsWith('/')) {
       url = new URL(moduleName, this.root);
     } else if(moduleName.startsWith('./') || moduleName.startsWith('../')) {
-      url = new URL(`${basePath}/${moduleName}`, this.root);
+      url = new URL(moduleName, baseUrl);
     }
 
     if(this.importmapResolver !== null){
@@ -72,10 +77,8 @@ const getHttpModuleScope = function(
   url_: URL,
   importmapResolver?: ImportmapResolver
 ) {
-  const url = new URL(url_);
+  const url = urlHashAndSearchRemoved(url_);
   url.pathname = '/';
-  url.hash = '';
-  url.search = '';
 
   const cachedScope = cachedModuleScope.get(url.href);
   if(cachedScope !== undefined) {

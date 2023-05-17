@@ -294,7 +294,7 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
           const pluginData = args.pluginData as RemoteCachePluginData;
           const path = pluginData.filePath.scope.resolve(
             args.path,
-            getUrlDirname(pluginData.filePath.url).href,
+            getUrlDirname(pluginData.filePath.url),
           );
           if (path === null) {
             return null;
