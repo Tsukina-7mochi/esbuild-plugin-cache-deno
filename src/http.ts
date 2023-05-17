@@ -1,5 +1,5 @@
 import { posix, sha256 } from "../deps.ts";
-import type { ModuleScope, ModuleFilePath, LockMap } from "./types.ts";
+import type { ModuleScope, ModuleFilePath } from "./types.ts";
 import ImportmapResolver from "./importmap.ts";
 
 class HttpModuleScope implements ModuleScope {
