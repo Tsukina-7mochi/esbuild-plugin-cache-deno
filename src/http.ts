@@ -54,9 +54,9 @@ class HttpModuleFilePath implements ModuleFilePath {
   url: URL;
   scope: HttpModuleScope;
 
-  constructor(url: URL, scope?: HttpModuleScope) {
+  constructor(url: URL, importmapResolver?: ImportmapResolver) {
     this.url = new URL(url);
-    this.scope = scope ?? getHttpModuleScope(this.url);
+    this.scope = getHttpModuleScope(this.url, importmapResolver);
   }
 
   toCacheURL(cacheRoot: URL) {
@@ -68,7 +68,10 @@ class HttpModuleFilePath implements ModuleFilePath {
 }
 
 const cachedModuleScope = new Map<string, HttpModuleScope>();
-const getHttpModuleScope = function(url_: URL) {
+const getHttpModuleScope = function(
+  url_: URL,
+  importmapResolver?: ImportmapResolver
+) {
   const url = new URL(url_);
   url.pathname = '/';
   url.hash = '';
@@ -79,7 +82,7 @@ const getHttpModuleScope = function(url_: URL) {
     return cachedScope;
   }
 
-  const scope = new HttpModuleScope(url);
+  const scope = new HttpModuleScope(url, importmapResolver);
   cachedModuleScope.set(url.href, scope);
 
   return scope;
