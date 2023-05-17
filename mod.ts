@@ -56,14 +56,16 @@ const getRedirectedLocation = async function (url: string) {
   return res.headers.get('location');
 };
 
-const getUrlDirname = function(url: URL) {
+const getUrlDirname = function (url: URL) {
   const resultUrl = new URL(url);
-  if(!url.pathname.endsWith('/')) {
-    resultUrl.pathname
-      = url.pathname.slice(0, url.pathname.lastIndexOf('/') + 1);
+  if (!url.pathname.endsWith('/')) {
+    resultUrl.pathname = url.pathname.slice(
+      0,
+      url.pathname.lastIndexOf('/') + 1,
+    );
   }
   return resultUrl;
-}
+};
 
 // const getNodeModulePath = async function (
 //   name: string,
@@ -191,13 +193,13 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
   const importKeys = new Set([
     ...Object.keys(options.importmap?.imports ?? {}),
     ...Object.values(options.importmap?.scopes ?? {})
-      .flatMap((map) => Object.keys(map))
+      .flatMap((map) => Object.keys(map)),
   ]);
   const importmapBasePath = posix.resolve(options.importmapBasePath ?? '.');
   const importmapBaseUrl = posix.toFileUrl(importmapBasePath);
   const importmapResolver = new ImportmapResolver(
     options.importmap ?? {},
-    importmapBaseUrl
+    importmapBaseUrl,
   );
   const lockMap = {
     remote: {},
@@ -223,20 +225,20 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
     name: 'esbuild-cache-plugin',
     setup(build) {
       // resolve based on import map
-      for(const importKey of importKeys) {
+      for (const importKey of importKeys) {
         const filter = importKey.endsWith('/')
           ? new RegExp(`^${importKey}`, 'i')
           : new RegExp(`^${importKey}$`, 'i');
         build.onResolve({ filter }, (args) => {
           const url = importmapResolver.resolve(
             args.path,
-            posix.dirname(args.importer)
+            posix.dirname(args.importer),
           );
           if (url === null) {
             return null;
           }
 
-          if(url.protocol === 'file:') {
+          if (url.protocol === 'file:') {
             return build.resolve(posix.fromFileUrl(url), {
               kind: args.kind,
               importer: args.importer,
@@ -282,86 +284,89 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
         };
       });
 
-      build.onResolve({ filter: /.*/, namespace: remoteCacheNamespace }, (args) => {
-        const pluginData = args.pluginData as RemoteCachePluginData;
-        const path = pluginData.filePath.scope.resolve(
-          args.path,
-          getUrlDirname(pluginData.filePath.url).href
-        );
-        if(path === null) {
-          return null;
-        }
-        return build.resolve(path.href, {
-          kind: args.kind,
-          importer: args.importer,
-        });
-      });
+      build.onResolve(
+        { filter: /.*/, namespace: remoteCacheNamespace },
+        (args) => {
+          const pluginData = args.pluginData as RemoteCachePluginData;
+          const path = pluginData.filePath.scope.resolve(
+            args.path,
+            getUrlDirname(pluginData.filePath.url).href,
+          );
+          if (path === null) {
+            return null;
+          }
+          return build.resolve(path.href, {
+            kind: args.kind,
+            importer: args.importer,
+          });
+        },
+      );
 
-//       // resolve npm imports
-//       build.onResolve({ filter: /^npm:/ }, async (args) => {
-//         const result = await resolveNodeModule(
-//           args.path.slice(4),
-//           args.importer,
-//           lockMap.npm.specifiers,
-//           options.denoCacheDirectory,
-//           npmModulePolyfill,
-//         );
-//         if(result === null || (typeof result.path !== 'string')) {
-//           return null;
-//         }
-//
-//         if(result.pluginData?.requireResolve) {
-//           return await build.resolve(result.path, {
-//             importer: args.importer,
-//             kind: args.kind,
-//             resolveDir: '.',
-//           });
-//         }
-//
-//         return {
-//           ...result,
-//           namespace: npmCacheNamespace,
-//         };
-//       });
-//
-//       build.onResolve(
-//         { filter: /.*/, namespace: npmCacheNamespace },
-//         async (args) => {
-//           const pluginData = args.pluginData as NpmCachePluginData;
-//           const _result = await resolveNodeModule(
-//             args.path,
-//             args.importer,
-//             lockMap.npm.packages[pluginData.pkgStr]?.dependencies ?? {},
-//             options.denoCacheDirectory,
-//             npmModulePolyfill,
-//           );
-//           if(_result === null || (typeof _result.path !== 'string')) {
-//             return null;
-//           }
-//           if(_result.pluginData?.requireResolve) {
-//             return await build.resolve(_result.path, {
-//               importer: args.importer,
-//               kind: args.kind,
-//               resolveDir: '.',
-//             });
-//           }
-//
-//           const result = {
-//             ..._result,
-//             namespace: npmCacheNamespace,
-//           };
-//
-//           if ('pluginData' in result) {
-//             result.pluginData = {
-//               ...pluginData,
-//               ...result.pluginData,
-//               asModule: false,
-//             };
-//           }
-//
-//           return result;
-//         },
-//       );
+      //       // resolve npm imports
+      //       build.onResolve({ filter: /^npm:/ }, async (args) => {
+      //         const result = await resolveNodeModule(
+      //           args.path.slice(4),
+      //           args.importer,
+      //           lockMap.npm.specifiers,
+      //           options.denoCacheDirectory,
+      //           npmModulePolyfill,
+      //         );
+      //         if(result === null || (typeof result.path !== 'string')) {
+      //           return null;
+      //         }
+      //
+      //         if(result.pluginData?.requireResolve) {
+      //           return await build.resolve(result.path, {
+      //             importer: args.importer,
+      //             kind: args.kind,
+      //             resolveDir: '.',
+      //           });
+      //         }
+      //
+      //         return {
+      //           ...result,
+      //           namespace: npmCacheNamespace,
+      //         };
+      //       });
+      //
+      //       build.onResolve(
+      //         { filter: /.*/, namespace: npmCacheNamespace },
+      //         async (args) => {
+      //           const pluginData = args.pluginData as NpmCachePluginData;
+      //           const _result = await resolveNodeModule(
+      //             args.path,
+      //             args.importer,
+      //             lockMap.npm.packages[pluginData.pkgStr]?.dependencies ?? {},
+      //             options.denoCacheDirectory,
+      //             npmModulePolyfill,
+      //           );
+      //           if(_result === null || (typeof _result.path !== 'string')) {
+      //             return null;
+      //           }
+      //           if(_result.pluginData?.requireResolve) {
+      //             return await build.resolve(_result.path, {
+      //               importer: args.importer,
+      //               kind: args.kind,
+      //               resolveDir: '.',
+      //             });
+      //           }
+      //
+      //           const result = {
+      //             ..._result,
+      //             namespace: npmCacheNamespace,
+      //           };
+      //
+      //           if ('pluginData' in result) {
+      //             result.pluginData = {
+      //               ...pluginData,
+      //               ...result.pluginData,
+      //               asModule: false,
+      //             };
+      //           }
+      //
+      //           return result;
+      //         },
+      //       );
 
       // verify the checksum of the cached file
       // and return the content with the appropriate loader
@@ -391,29 +396,29 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
       );
 
       // return the content with the appropriate loader
-//       build.onLoad(
-//         { filter: /.*/, namespace: npmCacheNamespace },
-//         async (args) => {
-//           const pluginData = args.pluginData as NpmCachePluginData;
-//
-//           if (posix.isAbsolute(args.path)) {
-//             const contents = await Deno.readTextFile(args.path);
-//             const loader = pluginData.loader ?? getLoader(args.path);
-//
-//             return {
-//               contents,
-//               loader,
-//               pluginData,
-//             };
-//           } else if (pluginData.loader === 'empty') {
-//             return {
-//               contents: '',
-//               loader: pluginData.loader,
-//               pluginData,
-//             };
-//           }
-//         },
-//       );
+      //       build.onLoad(
+      //         { filter: /.*/, namespace: npmCacheNamespace },
+      //         async (args) => {
+      //           const pluginData = args.pluginData as NpmCachePluginData;
+      //
+      //           if (posix.isAbsolute(args.path)) {
+      //             const contents = await Deno.readTextFile(args.path);
+      //             const loader = pluginData.loader ?? getLoader(args.path);
+      //
+      //             return {
+      //               contents,
+      //               loader,
+      //               pluginData,
+      //             };
+      //           } else if (pluginData.loader === 'empty') {
+      //             return {
+      //               contents: '',
+      //               loader: pluginData.loader,
+      //               pluginData,
+      //             };
+      //           }
+      //         },
+      //       );
     },
   };
 }
