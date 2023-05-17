@@ -190,6 +190,10 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
 
   const remoteCacheNamespace = 'net.ts7m.esbuild-cache-plugin.general';
   const npmCacheNamespace = 'net.ts7m.esbuild-cache-plugin.npm';
+  const cacheRoot = posix.toFileUrl(options.denoCacheDirectory);
+  if(!cacheRoot.pathname.endsWith('/')) {
+    cacheRoot.pathname += '/';
+  }
   const importKeys = new Set([
     ...Object.keys(options.importmap?.imports ?? {}),
     ...Object.values(options.importmap?.scopes ?? {})
@@ -274,7 +278,7 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
 
         const url = new URL(urlString);
         const filePath = new HttpModuleFilePath(url);
-        const cachePath = filePath.toCachePath(options.denoCacheDirectory);
+        const cachePath = posix.fromFileUrl(filePath.toCacheURL(cacheRoot));
         const loader = getLoader(urlString);
         const fileHash = lockMap.remote[urlString];
         return {

@@ -1,4 +1,4 @@
-import { posix, sha256 } from "../deps.ts";
+import { sha256 } from "../deps.ts";
 import type { ModuleScope, ModuleFilePath } from "./types.ts";
 import ImportmapResolver from "./importmap.ts";
 
@@ -59,17 +59,11 @@ class HttpModuleFilePath implements ModuleFilePath {
     this.scope = scope ?? getHttpModuleScope(this.url);
   }
 
-  toCachePath(cacheDirname: string) {
+  toCacheURL(cacheRoot: URL) {
     const hashContext = new sha256.Sha256();
     const pathHash = hashContext.update(this.url.pathname).toString();
-    const cachePath = posix.resolve(
-      cacheDirname,
-      'deps',
-      this.url.protocol.slice(0, -1),
-      this.url.hostname,
-      pathHash,
-    );
-    return cachePath;
+    const path = ['deps', this.url.protocol.slice(0, -1), this.url.hostname, pathHash].join('/');
+    return new URL(path, cacheRoot);
   }
 }
 
