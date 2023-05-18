@@ -2,7 +2,7 @@ import { esbuild, fs, posix, sha256 } from './deps.ts';
 import type { Importmap } from './src/importmap.ts';
 import type { LockMap } from './src/types.ts';
 import ImportmapResolver from './src/importmap.ts';
-import { HttpModuleFilePath } from './src/http.ts';
+import * as http from './src/http.ts';
 import * as util from './util.ts';
 
 type LoaderRules = {
@@ -25,7 +25,6 @@ interface RemoteCachePluginData {
   loader: esbuild.Loader | undefined;
   cachePath: string;
   fileHash: string;
-  filePath: HttpModuleFilePath;
 }
 
 interface NpmCachePluginData {
@@ -194,11 +193,6 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
   if (!cacheRoot.pathname.endsWith('/')) {
     cacheRoot.pathname += '/';
   }
-  const importKeys = new Set([
-    ...Object.keys(options.importmap?.imports ?? {}),
-    ...Object.values(options.importmap?.scopes ?? {})
-      .flatMap((map) => Object.keys(map)),
-  ]);
   const importmapBasePath = posix.resolve(options.importmapBasePath ?? '.');
   const importmapBaseUrl = posix.toFileUrl(importmapBasePath);
   const importmapResolver = new ImportmapResolver(
@@ -229,6 +223,11 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
     name: 'esbuild-cache-plugin',
     setup(build) {
       // resolve based on import map
+      const importKeys = new Set([
+        ...Object.keys(options.importmap?.imports ?? {}),
+        ...Object.values(options.importmap?.scopes ?? {})
+          .flatMap((map) => Object.keys(map)),
+      ]);
       for (const importKey of importKeys) {
         const filter = importKey.endsWith('/')
           ? new RegExp(`^${importKey}`, 'i')
@@ -260,10 +259,11 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
 
       // listen import starts with "http" and "https"
       build.onResolve({ filter: /^https?:\/\// }, async (args) => {
-        let urlString = args.path;
-        if (!(urlString in lockMap.remote)) {
+        let fileUrl = new URL(args.path);
+
+        if (!(fileUrl.href in lockMap.remote)) {
           // check if the redirect destination is in list
-          const redirectLocation = await getRedirectedLocation(urlString);
+          const redirectLocation = await getRedirectedLocation(fileUrl.href);
           if (typeof redirectLocation !== 'string') {
             return null;
           }
@@ -273,33 +273,35 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
             };
           }
 
-          urlString = redirectLocation;
+          fileUrl = new URL(redirectLocation);
         }
 
-        const url = new URL(urlString);
-        const filePath = new HttpModuleFilePath(url, importmapResolver);
-        const cachePath = posix.fromFileUrl(filePath.toCacheURL(cacheRoot));
-        const loader = getLoader(urlString);
-        const fileHash = lockMap.remote[urlString];
+        if(fileUrl === null) {
+          return null;
+        }
+        const cachePath = posix.fromFileUrl(http.toCacheUrl(fileUrl, cacheRoot));
+        const loader = getLoader(fileUrl.href);
+        const fileHash = lockMap.remote[fileUrl.href];
         return {
-          path: urlString,
+          path: fileUrl.href,
           namespace: remoteCacheNamespace,
-          pluginData: { loader, cachePath, fileHash, filePath },
+          pluginData: { loader, cachePath, fileHash },
         };
       });
 
       build.onResolve(
         { filter: /.*/, namespace: remoteCacheNamespace },
         (args) => {
-          const pluginData = args.pluginData as RemoteCachePluginData;
-          const path = pluginData.filePath.scope.resolve(
+          const fileUrl = http.resolveImport(
             args.path,
-            getUrlDirname(pluginData.filePath.url),
+            new URL(args.importer),
+            importmapResolver
           );
-          if (path === null) {
+          if(fileUrl === null) {
             return null;
           }
-          return build.resolve(path.href, {
+
+          return build.resolve(fileUrl.href, {
             kind: args.kind,
             importer: args.importer,
           });

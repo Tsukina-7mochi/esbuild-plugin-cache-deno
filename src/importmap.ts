@@ -95,6 +95,7 @@ class ImportmapResolver {
     }
   }
 
+  // importer -> URL
   resolve(path: string, importerDirname: string) {
     if(this.scopes !== null && typeof importerDirname === 'string') {
       for(const scope of this.scopes) {
