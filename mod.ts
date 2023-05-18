@@ -279,7 +279,7 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
         if(fileUrl === null) {
           return null;
         }
-        const cachePath = posix.fromFileUrl(http.toCacheUrl(fileUrl, cacheRoot));
+        const cachePath = posix.fromFileUrl(http.toCacheURL(fileUrl, cacheRoot));
         const loader = getLoader(fileUrl.href);
         const fileHash = lockMap.remote[fileUrl.href];
         return {
