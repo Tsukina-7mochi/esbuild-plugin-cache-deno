@@ -2,13 +2,6 @@ import { posix, fs } from "../deps.ts";
 import type { LockMap, PackageJSON } from "./types.ts";
 import ImportmapResolver from "./importmap.ts";
 
-interface PackageScope {
-  url: URL,
-  exports: Record<string, string>,
-  // imports?: Record<string, string>,
-  dependencies: Record<string, string>,
-};
-
 const coreModuleNames = [
   'assert',
   'async_hooks',
