@@ -12,7 +12,8 @@ interface LockMap {
   };
 }
 
-interface PartialPackageJson {
+interface PartialPackageJSON {
+  name: string;
   main?: string;
   exports?: string | {
     [key: string]: string | { [key: string]: string },
@@ -21,7 +22,7 @@ interface PartialPackageJson {
     [key: string]: string | { [key: string]: string },
   }
 }
-type PackageJson = Required<PartialPackageJson>;
+type PackageJSON = Required<PartialPackageJSON>;
 
 type ImportKind = 'import' | 'require';
 
@@ -36,4 +37,4 @@ interface ModuleFilePath {
   toCacheURL: (cacheDirname: URL) => URL | null | Promise<URL | null>;
 }
 
-export type { LockMap, PackageJson, ModuleScope, ModuleFilePath };
+export type { LockMap, PackageJSON, ModuleScope, ModuleFilePath };

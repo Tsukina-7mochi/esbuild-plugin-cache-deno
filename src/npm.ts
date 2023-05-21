@@ -1,9 +1,13 @@
 import { posix, fs } from "../deps.ts";
+import type { LockMap, PackageJSON } from "./types.ts";
+import ImportmapResolver from "./importmap.ts";
 
-interface ModuleResolveResult {
-  name: string;
-  type: 'file' | 'core-module' | 'module';
-}
+interface PackageScope {
+  url: URL,
+  exports: Record<string, string>,
+  // imports?: Record<string, string>,
+  dependencies: Record<string, string>,
+};
 
 const coreModuleNames = [
   'assert',
@@ -52,9 +56,9 @@ const coreModuleNames = [
   'zlib',
 ];
 
-const testFilePath = async function(path: string) {
-  if(await fs.exists(path, { isFile: true })) {
-    return path;
+const testFileExistence = async function(url: URL, cacheRoot: URL) {
+  if(await fs.exists(toCacheURL(url, cacheRoot), { isFile: true })) {
+    return url;
   }
   return null;
 }
@@ -70,191 +74,176 @@ const decomposePackageNameVersion = function (
   }
 };
 
-const npmUrlToCachePath = function(url: URL, cacheDirectory: string) {
-  const path = url.pathname.split('/');
-  const pkgFullName = path[1];
+const toCacheURL = function(url: URL, cacheRoot: URL) {
+  const pathSegments = url.pathname.split('/');
+  const pkgFullName = pathSegments[1];
   const [pkgName, pkgVersion] = decomposePackageNameVersion(pkgFullName);
-  const innerPath = path.slice(2).join('/');
-  const cachePath = posix.resolve(
-    cacheDirectory,
+  const path = [
     'npm',
     'registry.npmjs.org',
     pkgName,
     pkgVersion,
-    innerPath
-  );
-
-  return cachePath + (url.pathname.endsWith('/') ? '/' : '');
+    ...pathSegments.slice(2)
+  ].join('/');
+  return new URL(path, cacheRoot);
 }
 
-const npmCachePathToUrl = function(path_: string) {
-  const cacheRootPath = posix.join('npm', 'registry.npmjs.org');
-  const moduleNameIndex = path_.indexOf(cacheRootPath);
-  const path = path_.slice(moduleNameIndex + cacheRootPath.length).split('/');
-  const pkgFullName = `${path[1]}@${path[2]}`;
-  const innerPath = path.slice(3).join('/');
-  return new URL(`npm:/${pkgFullName}/${innerPath}`);
-}
-
-const resolveNpmCachePath = async function(path: string) {
-  if(await fs.exists(path, { isDirectory: true })) {
-    if(await testFilePath(posix.join(path, 'package.json'))) {
-      const content = await Deno.readTextFile(posix.join(path, 'package.json'));
-      const main = JSON.parse(content)['main'];
-      if(typeof main === 'string') {
-        return posix.resolve(path, main);
-      }
-    }
-
-    return testFilePath(posix.join(path, 'index.js'))
-      ?? testFilePath(posix.join(path, 'index.json'))
-      ?? testFilePath(posix.join(path, 'index.node'));
+const normalizeNodeNpmUrl = function(url: URL) {
+  if(url.pathname === '' || url.pathname === '/') {
+    throw Error('URL path must not be empty or root (/).');
   }
 
-  return testFilePath(path)
-    ?? testFilePath(`${path}.js`)
-    ?? testFilePath(`${path}.json`)
-    ?? testFilePath(`${path}.node`);
+  let pathname = url.pathname;
+  if(!pathname.startsWith('/')) {
+    pathname = '/' + pathname;
+  }
+  if(pathname.split('/').length < 3) {
+    pathname += '/';
+  }
+
+  return new URL(`${url.protocol}${pathname}`);
 }
 
-const packageFullNamePattern = /^@?[^@]+@\d+\.\d+\.\d+.*$/;
+const getPackageNameVersion = function(url: URL) {
+  const normalized = normalizeNodeNpmUrl(url);
+  return decomposePackageNameVersion(normalized.pathname.split('/')[1]);
+}
 
-class NpmNameSpace {
-  root: URL;
-  specifiers: { [key: string]: string };
-  cacheDirectory: string;
-  exports: { [key: string]: string[] };
+const findClosestPackageScope = function(url: URL, cacheRoot: URL,) {
+  const normalizedUrl = normalizeNodeNpmUrl(url);
+  let packageJsonUrl = new URL('./package.json', normalizedUrl);
 
-  constructor(
-    root: NpmNameSpace["root"],
-    cacheDirectory: string,
-    specifiers: NpmNameSpace["specifiers"],
-    exports: { [key: string]: string | string[] | { [key: string]: string } } | string
-  ) {
-    if(!root.pathname.startsWith('/')) {
-      throw Error(`npm module URL must starts with "/", like "npm:/module/".`);
-    }
-    if(!root.pathname.endsWith('/')) {
-      throw Error(`npm module URL must ends with "/", like "npm:/module/".`);
-    }
-    for(const value of Object.values(specifiers)) {
-      if(!packageFullNamePattern.test(value)) {
-        throw Error(`Package full name ${value} is invalid.`);
-      }
-    }
-
-    this.root = root;
-    this.cacheDirectory = cacheDirectory;
-    this.specifiers = specifiers;
-    this.exports = {};
-
-    if(typeof exports === 'string') {
-      this.exports[this.root.pathname] = [exports];
-    } else if(Object.keys(exports).some(v => !v.startsWith('.'))) {
-      // only conditions
-      if('import' in exports) {
-        this.exports[this.root.pathname] = [exports['import']];
-      } else if('require' in exports) {
-        this.exports[this.root.pathname] = [exports['require']];
-      } else if('umd' in exports) {
-        this.exports[this.root.pathname] = [exports['umd']];
-      } else {
-        throw Error(`Cannot interpret export ${key} in ${this.root}`);
-      }
-    } else {
-      for(const key in exports) {
-        const value = exports[key];
-        const path = posix.resolve(this.root.pathname, key);
-
-        if(typeof value === 'string') {
-          this.exports[path] = [value];
-        } else if(Array.isArray(value)) {
-          this.exports[path] = value;
-        } else {
-          if('import' in value) {
-            this.exports[path] = [value['import']];
-          } else if('require' in value) {
-            this.exports[path] = [value['require']];
-          } else if('umd' in value) {
-            this.exports[path] = [value['umd']];
-          } else {
-            throw Error(`Cannot interpret export ${key} in ${this.root}`);
-          }
-        }
-      }
+  while(!testFileExistence(packageJsonUrl, cacheRoot)) {
+    packageJsonUrl = new URL('../package.json', packageJsonUrl);
+    if(packageJsonUrl.pathname.split('/').length < 3) {
+      return null;
     }
   }
 
-  async resolve(path: string, basePath?: string) {
-    const absPath = posix.resolve(this.root.pathname, basePath ?? '', path);
-    // resolve exports
-    for(const key in this.exports) {
-      if(key.endsWith('/')) {
-        if(absPath.startsWith(key)) {
-          for(const path of this.exports[absPath]) {
-            const url = new URL(path + absPath.slice(0, -key.length), this.root);
-            const resolved = await resolveNpmCachePath(npmUrlToCachePath(url, this.cacheDirectory));
-            if(resolved !== null) {
-              return npmCachePathToUrl(resolved);
-            }
-          }
-        }
-      } else if(key.endsWith('/*')) {
-        //
-      } else {
-        if(absPath === key) {
-          for(const path of this.exports[absPath]) {
-            const url = new URL(path, this.root);
-            const resolved = await resolveNpmCachePath(npmUrlToCachePath(url, this.cacheDirectory));
-            if(resolved !== null) {
-              return npmCachePathToUrl(resolved);
-            }
-          }
-        }
-      }
+  return new URL('.', packageJsonUrl);
+}
+
+const getPackageExports = function(packageJSON: PackageJSON, useMain = true) {
+  const exports: Record<string, string> = {};
+  if(useMain && typeof packageJSON['main'] === 'string') {
+    exports['.'] = packageJSON['main'];
+  }
+  // TODO: process exports
+
+  return exports;
+}
+
+// const getPackageImports = function(packageJSON: PackageJSON) {
+//   return {};
+// }
+
+const resolveAsFile = async function(url: URL, cacheRoot: URL) {
+  return await testFileExistence(url, cacheRoot)
+    ?? await testFileExistence(new URL(`${url.href}.js`), cacheRoot)
+    ?? await testFileExistence(new URL(`${url.href}.json`), cacheRoot)
+    ?? await testFileExistence(new URL(`${url.href}.node`), cacheRoot);
+}
+
+const resolveIndex = async function(url: URL, cacheRoot: URL) {
+  return await testFileExistence(new URL('index.js', url), cacheRoot)
+    ?? await testFileExistence(new URL('index.json', url), cacheRoot)
+    ?? await testFileExistence(new URL('index.node', url), cacheRoot);
+}
+
+const resolveAsDirectory = async function(
+  url: URL,
+  cacheRoot: URL
+) {
+  if(await testFileExistence(new URL('package.json', url), cacheRoot)) {
+    const content = await Deno.readTextFile(toCacheURL(new URL('package.json', url), cacheRoot));
+    const packageJSON = JSON.parse(content) as PackageJSON;
+    const exports = getPackageExports(packageJSON);
+    const main = exports['.'];
+    const mainURL = new URL(main, url);
+
+    if(typeof main === 'string') {
+      return await resolveAsFile(mainURL, cacheRoot)
+        ?? await resolveIndex(mainURL, cacheRoot)
+        ?? await resolveIndex(url, cacheRoot);
+    }
+    return null;
+  }
+
+  return resolveIndex(url, cacheRoot);
+}
+
+const resolveImport = async function(
+  moduleName: string,
+  importer: URL,
+  cacheRoot: URL,
+  lockMap: LockMap,
+  importmapResolver?: ImportmapResolver
+) {
+  const importerDirname = new URL('.', importer).href;
+
+  if(moduleName.startsWith('node:')) {
+    return importmapResolver?.resolve(moduleName, importerDirname)
+      ?? new URL(moduleName);
+  }
+  if(coreModuleNames.includes(moduleName)) {
+    return importmapResolver?.resolve(`node:${moduleName}`, importerDirname)
+      ?? new URL(`node:${moduleName}`);
+  }
+
+  if(moduleName.startsWith('./') || moduleName.startsWith('../') || moduleName.startsWith('/')) {
+    const url = new URL(moduleName, importer);
+    const resolved = await resolveAsFile(url, cacheRoot)
+      ?? await resolveAsDirectory(url, cacheRoot);
+    if(resolved === null) {
+      return null;
     }
 
-    if(path.startsWith('/')) {
-      // absolute path
-      const url = new URL(path, this.root);
-      const resolved = await resolveNpmCachePath(npmUrlToCachePath(url, this.cacheDirectory));
-      if(resolved === null) {
-        return null;
-      }
-      return npmCachePathToUrl(resolved);
-    } else if(path.startsWith('./') || path.startsWith('../')) {
-      // relative path
-      if(typeof basePath !== 'string') {
-        throw Error('Cannot resolve relative path without base path');
-      }
-      const url = new URL(
-        posix.resolve(posix.join(this.root.pathname, basePath), path),
-        `${this.root.protocol}/`
-      );
-      const resolved = await resolveNpmCachePath(npmUrlToCachePath(url, this.cacheDirectory));
-      if(resolved === null) {
-        return null;
-      }
-      return npmCachePathToUrl(resolved);
-    } else {
-      // bare module
-      if(path.startsWith('node:')) {
-        return new URL(path);
-      }
-      if(coreModuleNames.includes(path)) {
-        return new URL(`node:${path}`);
-      }
-      if(path in this.specifiers) {
-        return new URL(`npm:${this.specifiers[path]}`);
-      }
-    }
+    return importmapResolver?.resolve(resolved.href, importerDirname)
+      ?? resolved;
+  }
 
-    throw Error(`Cannot resolve ${path}.`);
+  if(moduleName.startsWith('#')) {
+    // resolve imports
+  }
+
+  // TODO: resolvePackageSelf()
+
+  // Get the list of dependencies depending on the importer's protocol.
+  let dependencies: Record<string, string> | undefined;
+  if(importer.protocol === 'file:') {
+    dependencies = lockMap.npm?.specifiers;
+  } else {
+    const pkgFullName = normalizeNodeNpmUrl(importer).pathname.split('/')[1];
+    dependencies = lockMap.npm?.packages?.[pkgFullName]?.dependencies;
+  }
+  if(dependencies === undefined) {
+    return null;
+  }
+
+  const moduleNamePath = moduleName.includes(':')
+    ? moduleName.slice(moduleName.lastIndexOf(':') + 1)
+    : moduleName;
+  const pkgFullName = moduleNamePath.split('/')[0];
+  const [pkgName, _] = decomposePackageNameVersion(pkgFullName);
+  const importPkgFullName = dependencies[pkgName];
+  if(typeof importPkgFullName !== 'string') {
+    return null;
+  }
+  const path = moduleNamePath.split('/').slice(1);
+  if(path.length === 0) {
+    const packageJSONText = await Deno.readTextFile(toCacheURL(new URL(`npm:/${importPkgFullName}/package.json`), cacheRoot));
+    const packageJSON = JSON.parse(packageJSONText) as PackageJSON;
+    const exports = getPackageExports(packageJSON);
+    if(exports['.'] === undefined) {
+      return null;
+    }
+    const url = new URL(exports['.'], `npm:/${importPkgFullName}/`);
+    return importmapResolver?.resolve(url.href, importerDirname) ?? url;
+  } else {
+    const url = new URL(`npm:/${[importPkgFullName, ...path].join('/')}`);
+    // TODO: resolve exports
+    return importmapResolver?.resolve(url.href, importerDirname) ?? url;
   }
 }
 
-export {
-  npmUrlToCachePath,
-  npmCachePathToUrl,
-  NpmNameSpace
-};
+export { resolveImport, toCacheURL };

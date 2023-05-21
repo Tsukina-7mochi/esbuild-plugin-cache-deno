@@ -24,9 +24,9 @@ const config: esbuild.BuildOptions = {
       lockMap,
       denoCacheDirectory: denoPath,
       importmap,
-      npmModulePolyfill: {
-        'util': { loader: 'empty' },
-      },
+      loaderRules: [
+        { test: /^node:util/, loader: 'empty' },
+      ]
     }),
   ],
 };
