@@ -97,11 +97,6 @@ const normalizeNodeNpmUrl = function(url: URL) {
   return new URL(`${url.protocol}${pathname}`);
 }
 
-const getPackageNameVersion = function(url: URL) {
-  const normalized = normalizeNodeNpmUrl(url);
-  return decomposePackageNameVersion(normalized.pathname.split('/')[1]);
-}
-
 const findClosestPackageScope = function(url: URL, cacheRoot: URL,) {
   const normalizedUrl = normalizeNodeNpmUrl(url);
   let packageJsonUrl = new URL('./package.json', normalizedUrl);
@@ -240,3 +235,16 @@ const resolveImport = async function(
 }
 
 export { resolveImport, toCacheURL };
+
+export const __test = {
+  testFileExistence,
+  decomposePackageNameVersion,
+  toCacheURL,
+  normalizeNodeNpmUrl,
+  findClosestPackageScope,
+  getPackageExports,
+  resolveAsFile,
+  resolveIndex,
+  resolveAsDirectory,
+  resolveImport
+};
