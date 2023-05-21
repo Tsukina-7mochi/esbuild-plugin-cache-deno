@@ -167,7 +167,7 @@ const resolveImport = async function(
   lockMap: LockMap,
   importmapResolver?: ImportmapResolver
 ) {
-  const importerDirname = new URL('.', importer).href;
+  const importerDirname = new URL('.', importer);
 
   if(moduleName.startsWith('node:')) {
     return importmapResolver?.resolve(moduleName, importerDirname)

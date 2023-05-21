@@ -20,7 +20,7 @@ const resolveImport = function(
   }
 
   if(importmapResolver !== undefined) {
-    const importerDirname = new URL('.', importer).href;
+    const importerDirname = new URL('.', importer);
     if(url === null) {
       url = importmapResolver.resolve(moduleName, importerDirname);
     } else {

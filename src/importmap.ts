@@ -96,11 +96,11 @@ class ImportmapResolver {
   }
 
   // importer -> URL
-  resolve(path: string, importerDirname: string) {
-    if(this.scopes !== null && typeof importerDirname === 'string') {
+  resolve(path: string, importerDirname: URL) {
+    if(this.scopes !== null) {
       for(const scope of this.scopes) {
         if (scope.isFullUrl) {
-          if (importerDirname.startsWith(scope.path)) {
+          if (importerDirname.href.startsWith(scope.path)) {
             const resolved = resolveWithImports(path, scope.map);
             if (typeof resolved === 'string') {
               return resolved;
@@ -108,8 +108,8 @@ class ImportmapResolver {
           }
         } else {
           if (
-            importerDirname.includes(`/${scope.pathSegments.join('/')}/`) ||
-            importerDirname.endsWith(`/${scope.pathSegments.join('/')}`)
+            importerDirname.href.includes(`/${scope.pathSegments.join('/')}/`) ||
+            importerDirname.href.endsWith(`/${scope.pathSegments.join('/')}`)
           ) {
             const resolved = resolveWithImports(path, scope.map);
             if (typeof resolved === 'string') {
