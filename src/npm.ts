@@ -1,4 +1,4 @@
-import { posix, fs } from "../deps.ts";
+import { fs } from "../deps.ts";
 import type { LockMap, PartialPackageJSON } from "./types.ts";
 import ImportmapResolver from "./importmap.ts";
 
