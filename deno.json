@@ -41,6 +41,6 @@
     "build": "bash ./example/cache.sh && deno run -A ./example/build.ts",
     "test": "bash ./test/cache.sh && deno test -A",
     "debug:build": "bash ./example/cache.sh && deno run -A --inspect-brk ./example/build.ts",
-    "debug:test": "bash ./example/cache.sh && deno test -A --inspect-brk"
+    "debug:test": "bash ./test/cache.sh && deno test -A --inspect-brk"
   }
 }
