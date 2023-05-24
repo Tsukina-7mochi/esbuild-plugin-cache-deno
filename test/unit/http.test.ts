@@ -1,5 +1,5 @@
-import { asserts } from '../deps.ts';
-import * as http from '../src/http.ts';
+import { asserts } from '../../deps.ts';
+import * as http from '../../src/http.ts';
 
 const testName = (name: string) => `[http] ${name}`;
 
