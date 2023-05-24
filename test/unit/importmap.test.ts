@@ -1,7 +1,7 @@
 import { asserts } from '../../deps.ts';
 import ImportmapResolver from '../../src/importmap.ts';
 
-const testName = (name: string) => `[importmap resolver] ${name}`;
+const testName = (name: string) => `[importmap] ${name}`;
 
 Deno.test(testName('Simple import #1'), () => {
   const resolver = new ImportmapResolver(
