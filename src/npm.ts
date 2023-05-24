@@ -97,7 +97,7 @@ const normalizeNodeNpmUrl = function(url: URL) {
   return new URL(`${url.protocol}${pathname}`);
 }
 
-const findClosestPackageScope = function(url: URL, cacheRoot: URL,) {
+const findClosestPackageScope = function(url: URL, cacheRoot: URL) {
   const normalizedUrl = normalizeNodeNpmUrl(url);
   let packageJsonUrl = new URL('./package.json', normalizedUrl);
 
