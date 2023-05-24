@@ -1,5 +1,5 @@
 import { posix, fs } from "../deps.ts";
-import type { LockMap, PackageJSON } from "./types.ts";
+import type { LockMap, PartialPackageJSON } from "./types.ts";
 import ImportmapResolver from "./importmap.ts";
 
 const coreModuleNames = [
@@ -97,11 +97,11 @@ const normalizeNodeNpmUrl = function(url: URL) {
   return new URL(`${url.protocol}${pathname}`);
 }
 
-const findClosestPackageScope = function(url: URL, cacheRoot: URL) {
+const findClosestPackageScope = async function(url: URL, cacheRoot: URL) {
   const normalizedUrl = normalizeNodeNpmUrl(url);
   let packageJsonUrl = new URL('./package.json', normalizedUrl);
 
-  while(!testFileExistence(packageJsonUrl, cacheRoot)) {
+  while(await testFileExistence(packageJsonUrl, cacheRoot) === null) {
     packageJsonUrl = new URL('../package.json', packageJsonUrl);
     if(packageJsonUrl.pathname.split('/').length < 3) {
       return null;
@@ -111,7 +111,7 @@ const findClosestPackageScope = function(url: URL, cacheRoot: URL) {
   return new URL('.', packageJsonUrl);
 }
 
-const getPackageExports = function(packageJSON: PackageJSON, useMain = true) {
+const getPackageExports = function(packageJSON: PartialPackageJSON, useMain = true) {
   const exports: Record<string, string> = {};
   if(useMain && typeof packageJSON['main'] === 'string') {
     exports['.'] = packageJSON['main'];
@@ -126,6 +126,7 @@ const getPackageExports = function(packageJSON: PackageJSON, useMain = true) {
 // }
 
 const resolveAsFile = async function(url: URL, cacheRoot: URL) {
+  // .cjs or .mjs support?
   return await testFileExistence(url, cacheRoot)
     ?? await testFileExistence(new URL(`${url.href}.js`), cacheRoot)
     ?? await testFileExistence(new URL(`${url.href}.json`), cacheRoot)
@@ -133,6 +134,7 @@ const resolveAsFile = async function(url: URL, cacheRoot: URL) {
 }
 
 const resolveIndex = async function(url: URL, cacheRoot: URL) {
+  // .cjs or .mjs support?
   return await testFileExistence(new URL('index.js', url), cacheRoot)
     ?? await testFileExistence(new URL('index.json', url), cacheRoot)
     ?? await testFileExistence(new URL('index.node', url), cacheRoot);
@@ -144,7 +146,7 @@ const resolveAsDirectory = async function(
 ) {
   if(await testFileExistence(new URL('package.json', url), cacheRoot)) {
     const content = await Deno.readTextFile(toCacheURL(new URL('package.json', url), cacheRoot));
-    const packageJSON = JSON.parse(content) as PackageJSON;
+    const packageJSON = JSON.parse(content) as PartialPackageJSON;
     const exports = getPackageExports(packageJSON);
     const main = exports['.'];
     const mainURL = new URL(main, url);
@@ -220,7 +222,7 @@ const resolveImport = async function(
   const path = moduleNamePath.split('/').slice(1);
   if(path.length === 0) {
     const packageJSONText = await Deno.readTextFile(toCacheURL(new URL(`npm:/${importPkgFullName}/package.json`), cacheRoot));
-    const packageJSON = JSON.parse(packageJSONText) as PackageJSON;
+    const packageJSON = JSON.parse(packageJSONText) as PartialPackageJSON;
     const exports = getPackageExports(packageJSON);
     if(exports['.'] === undefined) {
       return null;
