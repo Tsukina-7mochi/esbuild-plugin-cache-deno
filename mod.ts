@@ -1,4 +1,4 @@
-import { esbuild, fs, posix, sha256 } from './deps.ts';
+import { esbuild, posix, sha256 } from './deps.ts';
 import type { Importmap } from './src/importmap.ts';
 import type { LockMap } from './src/types.ts';
 import ImportmapResolver from './src/importmap.ts';
@@ -50,17 +50,6 @@ const getRedirectedLocation = async function (url: string) {
   }
 
   return res.headers.get('location');
-};
-
-const getUrlDirname = function (url: URL) {
-  const resultUrl = new URL(url);
-  if (!url.pathname.endsWith('/')) {
-    resultUrl.pathname = url.pathname.slice(
-      0,
-      url.pathname.lastIndexOf('/') + 1,
-    );
-  }
-  return resultUrl;
 };
 
 function esbuildCachePlugin(options: Options): esbuild.Plugin {
