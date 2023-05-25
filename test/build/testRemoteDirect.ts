@@ -134,3 +134,24 @@ Deno.test(testName('npm #2'), async () => {
     'true'
   );
 });
+
+Deno.test(testName('npm #3'), async () => {
+  const denoCacheDirectory = await getDenoCacheDir();
+
+  try {
+    await esbuild.build({
+      entryPoints: ['./test/remote-direct/npm3.ts'],
+      bundle: true,
+      outdir: './test/dist',
+      platform: 'browser',
+      plugins: [
+        esbuildCachePlugin({
+          lockMap,
+          denoCacheDirectory,
+        }),
+      ],
+    });
+  } finally {
+    esbuild.stop();
+  }
+});
