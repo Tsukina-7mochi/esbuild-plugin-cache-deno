@@ -180,7 +180,10 @@ const resolveImport = async function(
       ?? new URL(`node:${moduleName}`);
   }
 
-  if(moduleName.startsWith('./') || moduleName.startsWith('../') || moduleName.startsWith('/')) {
+  if(moduleName.startsWith('/')) {
+    throw Error('Node.js module does not allowed to use absolute path import.');
+  }
+  if(moduleName.startsWith('./') || moduleName.startsWith('../')) {
     const url = new URL(moduleName, importer);
     const resolved = await resolveAsFile(url, cacheRoot)
       ?? await resolveAsDirectory(url, cacheRoot);
