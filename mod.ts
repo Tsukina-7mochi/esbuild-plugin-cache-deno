@@ -117,7 +117,7 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
         build.onResolve({ filter }, (args) => {
           const url = importmapResolver.resolve(
             args.path,
-            posix.dirname(args.importer),
+            new URL('.', posix.toFileUrl(args.importer)),
           );
           if (url === null) {
             return null;
