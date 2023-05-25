@@ -3,7 +3,7 @@ import * as http from '../../src/http.ts';
 
 const testName = (name: string) => `[http] ${name}`;
 
-Deno.test(testName('resolveImport #1'), () => {
+Deno.test(testName('resolveImport absolute'), () => {
   const actual = http.resolveImport(
     '/test.js',
     new URL('https://example.com/path/file.js')
@@ -12,7 +12,7 @@ Deno.test(testName('resolveImport #1'), () => {
   asserts.assertEquals(actual, new URL('https://example.com/test.js'));
 });
 
-Deno.test(testName('resolveImport #2'), () => {
+Deno.test(testName('resolveImport relative'), () => {
   const actual = http.resolveImport(
     './test.js',
     new URL('https://example.com/path/file.js')
@@ -21,7 +21,7 @@ Deno.test(testName('resolveImport #2'), () => {
   asserts.assertEquals(actual, new URL('https://example.com/path/test.js'));
 });
 
-Deno.test(testName('resolveImport #3'), () => {
+Deno.test(testName('resolveImport relative (parent)'), () => {
   const actual = http.resolveImport(
     '../test.js',
     new URL('https://example.com/path/file.js')
@@ -30,7 +30,7 @@ Deno.test(testName('resolveImport #3'), () => {
   asserts.assertEquals(actual, new URL('https://example.com/test.js'));
 });
 
-Deno.test(testName('toCacheURL #1'), () => {
+Deno.test(testName('toCacheURL'), () => {
   const actual = http.toCacheURL(
     new URL('https://example.com/test.js'),
     new URL('file:///home/user/.cache/deno/')

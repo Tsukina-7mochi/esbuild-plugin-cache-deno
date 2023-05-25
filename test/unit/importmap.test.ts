@@ -3,7 +3,7 @@ import ImportmapResolver from '../../src/importmap.ts';
 
 const testName = (name: string) => `[importmap] ${name}`;
 
-Deno.test(testName('Simple import #1'), () => {
+Deno.test(testName('Simple import relative'), () => {
   const resolver = new ImportmapResolver(
     {
       imports: {
@@ -17,7 +17,7 @@ Deno.test(testName('Simple import #1'), () => {
   asserts.assertEquals(actual, new URL('file:///path/to/root/xxx/yyy/zzz.js'));
 });
 
-Deno.test(testName('Simple import #2'), () => {
+Deno.test(testName('Simple import absolute'), () => {
   const resolver = new ImportmapResolver(
     {
       imports: {
@@ -31,7 +31,7 @@ Deno.test(testName('Simple import #2'), () => {
   asserts.assertEquals(actual, new URL('file:///xxx/yyy/zzz.js'));
 });
 
-Deno.test(testName('Simple import #3'), () => {
+Deno.test(testName('Simple import URL'), () => {
   const resolver = new ImportmapResolver(
     {
       imports: {
@@ -45,7 +45,7 @@ Deno.test(testName('Simple import #3'), () => {
   asserts.assertEquals(actual, new URL('https://example.com/path/to/file.js'));
 });
 
-Deno.test(testName('Simple import #4'), () => {
+Deno.test(testName('Simple import npm URL'), () => {
   const resolver = new ImportmapResolver(
     {
       imports: {
@@ -59,7 +59,7 @@ Deno.test(testName('Simple import #4'), () => {
   asserts.assertEquals(actual, new URL('npm:/module@1.0.0/index.js'));
 });
 
-Deno.test(testName('Path import #1'), () => {
+Deno.test(testName('Path import relative'), () => {
   const resolver = new ImportmapResolver(
     {
       imports: {
@@ -73,7 +73,7 @@ Deno.test(testName('Path import #1'), () => {
   asserts.assertEquals(actual, new URL('file:///path/to/root/xxx/yyy/zzz.js'));
 });
 
-Deno.test(testName('Path import #2'), () => {
+Deno.test(testName('Path import URL'), () => {
   const resolver = new ImportmapResolver(
     {
       imports: {
@@ -87,7 +87,7 @@ Deno.test(testName('Path import #2'), () => {
   asserts.assertEquals(actual, new URL('https://example.com/path/to/module/file.js'));
 });
 
-Deno.test(testName('Scope #1'), () => {
+Deno.test(testName('Scope match'), () => {
   const resolver = new ImportmapResolver(
     {
       imports: {
@@ -106,7 +106,7 @@ Deno.test(testName('Scope #1'), () => {
   asserts.assertEquals(actual, new URL('https://example2.com/path/to/module/file.js'));
 });
 
-Deno.test(testName('Scope #2'), () => {
+Deno.test(testName('Scope default'), () => {
   const resolver = new ImportmapResolver(
     {
       imports: {
@@ -125,7 +125,7 @@ Deno.test(testName('Scope #2'), () => {
   asserts.assertEquals(actual, new URL('https://example.com/path/to/module/file.js'));
 });
 
-Deno.test(testName('Scope #3'), () => {
+Deno.test(testName('Scope priority'), () => {
   const resolver = new ImportmapResolver(
     {
       imports: {
@@ -150,7 +150,7 @@ Deno.test(testName('Scope #3'), () => {
   asserts.assertEquals(actual, new URL('https://example2.com/path/to/module/file3.js'));
 });
 
-Deno.test(testName('Scope #4'), () => {
+Deno.test(testName('Scope URL path match'), () => {
   const resolver = new ImportmapResolver(
     {
       imports: {
@@ -169,7 +169,7 @@ Deno.test(testName('Scope #4'), () => {
   asserts.assertEquals(actual, new URL('https://example2.com/path/to/module/file.js'));
 });
 
-Deno.test(testName('Scope #5'), () => {
+Deno.test(testName('Scope URL path default'), () => {
   const resolver = new ImportmapResolver(
     {
       imports: {
