@@ -11,10 +11,10 @@ const config: esbuild.BuildOptions = {
       in: './example/main.ts',
       out: 'main',
     },
-    // {
-    //   in: './example/someDir/main2.ts',
-    //   out: 'main2',
-    // },
+    {
+      in: './example/someDir/main2.ts',
+      out: 'main2',
+    },
   ],
   bundle: true,
   outdir: './example/dist',
