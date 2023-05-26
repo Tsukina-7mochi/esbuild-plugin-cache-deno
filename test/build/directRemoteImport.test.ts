@@ -5,8 +5,8 @@ import { denoRunScript } from './util.ts';
 const testName = (name: string) => `[importmap] ${name}`;
 const relative = (path: string) => posix.resolve('./test/build/', path);
 const nativeCacheRootPath = await esbuildCachePlugin.util.getDenoDir();
-const cacheRootPath = '/tmp/net.ts7m.esbuild-cache-plugin/cache';
-const destPath = '/tmp/net.ts7m.esbuild-cache-plugin/dest';
+const cacheRootPath = '/tmp/net.ts7m.esbuild-cache-plugin/';
+const destPath = posix.join(cacheRootPath, 'dest');
 const cleanCache = async function() {
   if(await fs.exists(cacheRootPath)) {
     await Deno.remove(cacheRootPath, { recursive: true });
