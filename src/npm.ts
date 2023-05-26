@@ -218,7 +218,9 @@ const resolveImport = async function(
     : moduleName;
   const pkgFullName = moduleNamePath.split('/')[0];
   const [pkgName, _] = decomposePackageNameVersion(pkgFullName);
-  const importPkgFullName = dependencies[pkgName];
+  const importPkgFullName = importer.protocol === 'file:'
+    ? dependencies[pkgFullName]
+    : dependencies[pkgName];
   if(typeof importPkgFullName !== 'string') {
     return null;
   }
