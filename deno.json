@@ -39,8 +39,12 @@
   },
   "tasks": {
     "build": "bash ./example/cache.sh && deno run -A ./example/build.ts",
-    "test": "bash ./test/cache.sh && deno test -A",
+    "test": "bash ./test/build/cache.sh && deno test -A",
+    "test:unit": "deno test -A test/unit",
+    "test:build": "bash ./test/build/cache.sh && deno test -A test/build",
     "debug:build": "bash ./example/cache.sh && deno run -A --inspect-brk ./example/build.ts",
-    "debug:test": "bash ./test/cache.sh && deno test -A --inspect-brk"
+    "debug:test": "bash ./test/cache.sh && deno test -A --inspect-brk",
+    "debug:test:unit": "deno test -A --inspect-brk test/unit",
+    "debug:test:build": "bash ./test/build/cache.sh && deno test -A --inspect-brk test/build"
   }
 }
