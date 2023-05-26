@@ -201,6 +201,10 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
         }
 
         const loader = getLoader(url.href);
+        if(url.protocol === 'node:' && loader !== 'empty') {
+          return { errors: [{ text: 'Cannot import Node.js\'s core modules.' }] };
+        }
+
         const cachePath = loader === 'empty'
           ? ''
           : posix.fromFileUrl(npm.toCacheURL(url, cacheRoot));
