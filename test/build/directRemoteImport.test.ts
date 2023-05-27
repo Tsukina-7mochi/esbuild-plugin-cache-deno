@@ -168,4 +168,28 @@ Deno.test(testName('npm #2'), async () => {
   );
 });
 
-// TODO: Add test for npm3
+Deno.test(testName('npm #3'), async () => {
+  await cleanCache();
+  await fs.ensureDir(destPath);
+  const lockMapText = await Deno.readTextFile(relative('./remote-direct/lock.json'));
+  const lockMap = JSON.parse(lockMapText);
+
+  try {
+    await esbuild.build({
+      entryPoints: [
+        relative('remote-direct/npm3.ts'),
+      ],
+      bundle: true,
+      outdir: destPath,
+      platform: 'browser',
+      plugins: [
+        esbuildCachePlugin({
+          lockMap,
+          denoCacheDirectory: nativeCacheRootPath,
+        }),
+      ],
+    });
+  } finally {
+    esbuild.stop();
+  }
+});

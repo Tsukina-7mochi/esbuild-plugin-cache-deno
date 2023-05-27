@@ -822,12 +822,12 @@ Deno.test(testName('resolveImport deps from file'), async () => {
 
 Deno.test(testName('resolveImport deps from module'), async () => {
   await cleanCache();
-  await fs.ensureDir(modulePath('module/1.0.0/'));
+  await fs.ensureDir(modulePath('module1/1.0.0/'));
   await Deno.writeTextFile(
-    modulePath('module/1.0.0/package.json'),
-    '{ "name": "module", "main": "main.js" }'
+    modulePath('module1/1.0.0/package.json'),
+    '{ "name": "module1", "main": "main.js" }'
     );
-  await Deno.writeTextFile(modulePath('module/1.0.0/main.js'), '');
+  await Deno.writeTextFile(modulePath('module1/1.0.0/main.js'), '');
   await fs.ensureDir(modulePath('module2/1.0.0/'));
   await Deno.writeTextFile(
     modulePath('module2/1.0.0/package.json'),
@@ -836,16 +836,16 @@ Deno.test(testName('resolveImport deps from module'), async () => {
   await Deno.writeTextFile(modulePath('module2/1.0.0/main.js'), '');
   const fileUrl = await npm.resolveImport(
     'module2',
-    new URL('npm:/module@1.0.0/main.js'),
+    new URL('npm:/module1@1.0.0/main.js'),
     cacheRoot,
     {
       version: '2',
       npm: {
         specifiers: {
-          "module": "module@1.0.0"
+          "module1": "module1@1.0.0"
         },
         packages: {
-          "module@1.0.0": {
+          "module1@1.0.0": {
             "integrity": "SHA HASH HERE",
             "dependencies": {
               "module2": "module2@1.0.0"
@@ -864,6 +864,41 @@ Deno.test(testName('resolveImport deps from module'), async () => {
   asserts.assertEquals(
     fileUrl,
     new URL('npm:/module2@1.0.0/main.js')
+  );
+});
+
+Deno.test(testName('resolveImport self exports'), async () => {
+  await cleanCache();
+  await fs.ensureDir(modulePath('some-module/1.0.0/'));
+  await Deno.writeTextFile(
+    modulePath('some-module/1.0.0/package.json'),
+    '{ "name": "some-module", "exports": { ".": "./main.js" }}'
+  );
+  await Deno.writeTextFile(modulePath('some-module/1.0.0/main.js'), '');
+  const fileUrl = await npm.resolveImport(
+    'some-module',
+    new URL('npm:/some-module@1.0.0/foo.js'),
+    cacheRoot,
+    {
+      version: '2',
+      npm: {
+        specifiers: {
+          "some-module": "some-module@1.0.0"
+        },
+        packages: {
+          "some-module@1.0.0": {
+            "integrity": "SHA HASH HERE",
+            "dependencies": {
+            }
+          },
+        },
+      },
+    }
+  );
+
+  asserts.assertEquals(
+    fileUrl,
+    new URL('npm:/some-module@1.0.0/main.js')
   );
 });
 
