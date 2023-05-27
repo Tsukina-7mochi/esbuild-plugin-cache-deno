@@ -275,9 +275,13 @@ const resolveImport = async function(
     // resolve imports
   }
 
-  // TODO: resolvePackageSelf()
+  const moduleNamePath = moduleName.includes(':')
+  ? moduleName.slice(moduleName.lastIndexOf(':') + 1)
+  : moduleName;
+  const pkgFullName = moduleNamePath.replace(/^\//, '').split('/')[0];
+  const [pkgName, _] = decomposePackageNameVersion(pkgFullName);
+  const path = moduleNamePath.replace(/^\//, '').split('/').slice(1);
 
-  // Get the list of dependencies depending on the importer's protocol.
   let dependencies: Record<string, string> | undefined;
   if(importer.protocol === 'file:') {
     dependencies = lockMap.npm?.specifiers;
@@ -285,39 +289,64 @@ const resolveImport = async function(
     const pkgFullName = normalizeNodeNpmUrl(importer).pathname.split('/')[1];
     dependencies = lockMap.npm?.packages?.[pkgFullName]?.dependencies;
   }
+
+  // resolve self package exports
+  if(importer.protocol !== 'file:') {
+    let scope = await findClosestPackageScope(importer, cacheRoot);
+    while(scope !== null) {
+      const importerPkgFullName = normalizeNodeNpmUrl(importer).pathname.split('/')[1];
+      const packageJSONText = await Deno.readTextFile(toCacheURL(new URL('package.json', scope), cacheRoot));
+      const packageJSON = JSON.parse(packageJSONText) as PartialPackageJSON;
+      if(packageJSON['name'] === pkgName) {
+        const exports = getPackageExports(packageJSON, false);
+        if(path.length === 0) {
+          if(typeof exports['.'] === 'string') {
+            const url = new URL(exports['.'], `npm:/${importerPkgFullName}/`);
+            return importmapResolver?.resolve(url.href, importerDirname) ?? url;
+          }
+        } else {
+          const exportResolved = resolveExports(`./${path.join('/')}`, exports);
+          if(typeof exportResolved === 'string') {
+            const url = new URL(exportResolved, `npm:/${importerPkgFullName}/`);
+            return importmapResolver?.resolve(url.href, importerDirname) ?? url;
+          }
+        }
+      }
+
+      if(scope.pathname.split('/').length <= 3) {
+        break;
+      }
+      scope = await findClosestPackageScope(new URL('..', scope), cacheRoot);
+    }
+  }
+
+  // Get the list of dependencies depending on the importer's protocol.
   if(dependencies === undefined) {
     return null;
   }
-
-  const moduleNamePath = moduleName.includes(':')
-    ? moduleName.slice(moduleName.lastIndexOf(':') + 1)
-    : moduleName;
-  const pkgFullName = moduleNamePath.split('/')[0];
-  const [pkgName, _] = decomposePackageNameVersion(pkgFullName);
-  const importPkgFullName = importer.protocol === 'file:'
+  const pkgToImportFullName = importer.protocol === 'file:'
     ? dependencies[pkgFullName]
     : dependencies[pkgName];
-  if(typeof importPkgFullName !== 'string') {
+  if(typeof pkgToImportFullName !== 'string') {
     return null;
   }
-  const path = moduleNamePath.split('/').slice(1);
-  const packageJSONText = await Deno.readTextFile(toCacheURL(new URL(`npm:/${importPkgFullName}/package.json`), cacheRoot));
+  const packageJSONText = await Deno.readTextFile(toCacheURL(new URL(`npm:/${pkgToImportFullName}/package.json`), cacheRoot));
   const packageJSON = JSON.parse(packageJSONText) as PartialPackageJSON;
   const exports = getPackageExports(packageJSON, true, importer.protocol === 'file:');
   if(path.length === 0) {
     if(exports['.'] === undefined) {
       return null;
     }
-    const url = new URL(exports['.'], `npm:/${importPkgFullName}/`);
+    const url = new URL(exports['.'], `npm:/${pkgToImportFullName}/`);
     return importmapResolver?.resolve(url.href, importerDirname) ?? url;
   } else {
     const exportResolved = resolveExports(`./${path.join('/')}`, exports);
     if(typeof exportResolved === 'string') {
-      const url = new URL(exportResolved, `npm:/${importPkgFullName}/`);
+      const url = new URL(exportResolved, `npm:/${pkgToImportFullName}/`);
       return importmapResolver?.resolve(url.href, importerDirname) ?? url;
     } else {
       // default behavior
-      const url = new URL(`npm:/${[importPkgFullName, ...path].join('/')}`);
+      const url = new URL(`npm:/${[pkgToImportFullName, ...path].join('/')}`);
       return importmapResolver?.resolve(url.href, importerDirname) ?? url;
     }
   }
