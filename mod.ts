@@ -67,7 +67,9 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
   }
   const importmapBasePath = posix.resolve(options.importmapBasePath ?? '.');
   const importmapBaseUrl = posix.toFileUrl(
-    importmapBasePath.endsWith('/') ? importmapBasePath : `${importmapBasePath}/`
+    importmapBasePath.endsWith('/')
+      ? importmapBasePath
+      : `${importmapBasePath}/`,
   );
   const importmapResolver = new ImportmapResolver(
     options.importmap ?? {},
@@ -149,10 +151,12 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
           fileUrl = new URL(redirectLocation);
         }
 
-        if(fileUrl === null) {
+        if (fileUrl === null) {
           return null;
         }
-        const cachePath = posix.fromFileUrl(http.toCacheURL(fileUrl, cacheRoot));
+        const cachePath = posix.fromFileUrl(
+          http.toCacheURL(fileUrl, cacheRoot),
+        );
         const loader = getLoader(fileUrl.href);
         const fileHash = lockMap.remote[fileUrl.href];
         return {
@@ -168,9 +172,9 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
           const fileUrl = http.resolveImport(
             args.path,
             new URL(args.importer),
-            importmapResolver
+            importmapResolver,
           );
-          if(fileUrl === null) {
+          if (fileUrl === null) {
             return null;
           }
 
@@ -187,7 +191,7 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
           .then(() => new URL(args.importer))
           .catch(() => posix.toFileUrl(args.importer))
           .catch(() => null);
-        if(importerUrl === null) {
+        if (importerUrl === null) {
           return null;
         }
 
@@ -196,15 +200,17 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
           importerUrl,
           cacheRoot,
           lockMap,
-          importmapResolver
+          importmapResolver,
         );
-        if(url === null) {
+        if (url === null) {
           return null;
         }
 
         const loader = getLoader(url.href);
-        if(url.protocol === 'node:' && loader !== 'empty') {
-          return { errors: [{ text: 'Cannot import Node.js\'s core modules.' }] };
+        if (url.protocol === 'node:' && loader !== 'empty') {
+          return {
+            errors: [{ text: 'Cannot import Node.js\'s core modules.' }],
+          };
         }
 
         const cachePath = loader === 'empty'
@@ -217,11 +223,11 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
           namespace: npmCacheNamespace,
           pluginData: { loader, cachePath },
         };
-      }
+      };
       build.onResolve({ filter: /^npm:/ }, resolveNpm);
       build.onResolve(
         { filter: /.*/, namespace: npmCacheNamespace },
-        resolveNpm
+        resolveNpm,
       );
 
       // verify the hash of the cached file
@@ -243,11 +249,11 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
             }
 
             return { contents, loader: pluginData.loader };
-          } catch(err) {
+          } catch (err) {
             return {
               errors: [{
                 text: `Failed to load cache of ${args.path}`,
-                detail: (err instanceof Error ? err.message : err)
+                detail: (err instanceof Error ? err.message : err),
               }],
             };
           }
@@ -267,13 +273,13 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
             // TODO: Verify the hash
 
             return { contents, loader: pluginData.loader };
-          } catch(err) {
+          } catch (err) {
             return {
               errors: [{
                 text: `Failed to load cache of ${args.path}`,
-                detail: (err instanceof Error ? err.message : err)
+                detail: (err instanceof Error ? err.message : err),
               }],
-            }
+            };
           }
         },
       );

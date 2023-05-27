@@ -26,7 +26,7 @@ const config: esbuild.BuildOptions = {
       importmap,
       loaderRules: [
         { test: /^node:util/, loader: 'empty' },
-      ]
+      ],
     }),
   ],
 };
