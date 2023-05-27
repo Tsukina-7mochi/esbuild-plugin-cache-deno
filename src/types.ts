@@ -16,7 +16,7 @@ interface PartialPackageJSON {
   name: string;
   main?: string;
   exports?: string | {
-    [key: string]: string | { [key: string]: string },
+    [key: string]: string | string[] | null | { [key: string]: string | string[] | null },
   },
   imports?: string | {
     [key: string]: string | { [key: string]: string },

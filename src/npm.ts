@@ -111,14 +111,90 @@ const findClosestPackageScope = async function(url: URL, cacheRoot: URL) {
   return new URL('.', packageJsonUrl);
 }
 
-const getPackageExports = function(packageJSON: PartialPackageJSON, useMain = true) {
+const getPackageExports = function(packageJSON: PartialPackageJSON, useMain = true, preferImport = false) {
   const exports: Record<string, string> = {};
   if(useMain && typeof packageJSON['main'] === 'string') {
     exports['.'] = packageJSON['main'];
   }
-  // TODO: process exports
+
+  const rawExports = packageJSON['exports'];
+  if(rawExports === undefined) {
+    // do nothing
+  } else if(typeof rawExports === 'string') {
+    exports['.'] = rawExports;
+  } else {
+    const keyTypes = Object.keys(rawExports).map(key => key === '.' || key.startsWith('./'));
+    if(keyTypes.every(v => v)) {
+      // keys are path
+      for(const key in rawExports) {
+        let value = rawExports[key];
+        if(value === null) {
+          continue;
+        } else if(typeof value === 'string') {
+          exports[key] = value;
+        } else if(Array.isArray(value)) {
+          // TODO: support alternatives
+          if(value.length > 0) {
+            exports[key] = value[0];
+          }
+        } else {
+          if(preferImport) {
+            value = value['import']
+              ?? value['require']
+              ?? value['default'];
+          } else {
+            value = value['require']
+              ?? value['import']
+              ?? value['default'];
+          }
+          if(typeof value === 'string') {
+            exports[key] = value;
+          }
+        }
+      }
+    } else if(keyTypes.every(v => !v)) {
+      // keys are conditions
+      let value = null;
+      if(preferImport) {
+        value = rawExports['import']
+          ?? rawExports['require']
+          ?? rawExports['default'];
+      } else {
+        value = rawExports['require']
+          ?? rawExports['import']
+          ?? rawExports['default'];
+      }
+      if(typeof value === 'string') {
+        exports['.'] = value;
+      }
+    } else {
+      throw Error('Condition and path are mixed in the keys of package.json exports');
+    }
+  }
 
   return exports;
+}
+
+const resolveExports = function (path: string, exports: Record<string, string>) {
+  if(path === '.' || path ==='') {
+    return exports['.'];
+  }
+
+  for(const key in exports) {
+    if(key.includes('*')) {
+      // TODO: support wild cards
+    } else {
+      if(key.endsWith('/')) {
+        if(path.startsWith(key)) {
+          return exports[key] + path.slice(key.length);
+        }
+      } else {
+        if(key === path) {
+          return exports[key];
+        }
+      }
+    }
+  }
 }
 
 // const getPackageImports = function(packageJSON: PackageJSON) {
@@ -225,19 +301,25 @@ const resolveImport = async function(
     return null;
   }
   const path = moduleNamePath.split('/').slice(1);
+  const packageJSONText = await Deno.readTextFile(toCacheURL(new URL(`npm:/${importPkgFullName}/package.json`), cacheRoot));
+  const packageJSON = JSON.parse(packageJSONText) as PartialPackageJSON;
+  const exports = getPackageExports(packageJSON, true, importer.protocol === 'file:');
   if(path.length === 0) {
-    const packageJSONText = await Deno.readTextFile(toCacheURL(new URL(`npm:/${importPkgFullName}/package.json`), cacheRoot));
-    const packageJSON = JSON.parse(packageJSONText) as PartialPackageJSON;
-    const exports = getPackageExports(packageJSON);
     if(exports['.'] === undefined) {
       return null;
     }
     const url = new URL(exports['.'], `npm:/${importPkgFullName}/`);
     return importmapResolver?.resolve(url.href, importerDirname) ?? url;
   } else {
-    const url = new URL(`npm:/${[importPkgFullName, ...path].join('/')}`);
-    // TODO: resolve exports
-    return importmapResolver?.resolve(url.href, importerDirname) ?? url;
+    const exportResolved = resolveExports(`./${path.join('/')}`, exports);
+    if(typeof exportResolved === 'string') {
+      const url = new URL(exportResolved, `npm:/${importPkgFullName}/`);
+      return importmapResolver?.resolve(url.href, importerDirname) ?? url;
+    } else {
+      // default behavior
+      const url = new URL(`npm:/${[importPkgFullName, ...path].join('/')}`);
+      return importmapResolver?.resolve(url.href, importerDirname) ?? url;
+    }
   }
 }
 
@@ -250,6 +332,7 @@ export const __test = {
   normalizeNodeNpmUrl,
   findClosestPackageScope,
   getPackageExports,
+  resolveExports,
   resolveAsFile,
   resolveIndex,
   resolveAsDirectory,

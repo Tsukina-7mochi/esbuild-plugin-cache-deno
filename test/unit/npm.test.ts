@@ -237,17 +237,117 @@ Deno.test(testName('fileClosestPackageScope submodule descendant'), async () => 
   );
 });
 
-// TODO: Add tests for other exports
-
-Deno.test(testName('getFileExports main field'), async () => {
+Deno.test(testName('getFileExports as-is'), async () => {
   const exports = npm.getPackageExports({
     name: '',
-    main: 'index.js',
+    exports: {
+      '.': './index.js',
+      './foo': './foo/index.js',
+      './bar/': './bar/',
+    },
   });
 
   asserts.assertEquals(
     exports,
-    { '.': 'index.js' }
+    {
+      '.': './index.js',
+      './foo': './foo/index.js',
+      './bar/': './bar/',
+    }
+  );
+});
+
+Deno.test(testName('getFileExports conditional import'), async () => {
+  const exports = npm.getPackageExports({
+    name: '',
+    exports: {
+      '.': './index.js',
+      './foo': './foo/index.js',
+      './bar/': './bar/',
+    },
+  });
+
+  asserts.assertEquals(
+    exports,
+    {
+      '.': './index.js',
+      './foo': './foo/index.js',
+      './bar/': './bar/',
+    }
+  );
+});
+
+Deno.test(testName('getFileExports main field'), async () => {
+  const exports = npm.getPackageExports({
+    name: '',
+    main: './index.js',
+  });
+
+  asserts.assertEquals(
+    exports,
+    { '.': './index.js' }
+  );
+});
+
+Deno.test(testName('getFileExports main override'), async () => {
+  const exports = npm.getPackageExports({
+    name: '',
+    main: './index.js',
+    exports: { '.': './index2.js' }
+  });
+
+  asserts.assertEquals(
+    exports,
+    { '.': './index2.js' }
+  );
+});
+
+Deno.test(testName('getFileExports conditional exports (CJS)'), async () => {
+  const exports = npm.getPackageExports({
+    name: '',
+    exports: {
+      '.': {
+        'require': './index.js',
+        'import': './index.mjs',
+      },
+    },
+  }, true, false);
+
+  asserts.assertEquals(
+    exports,
+    { '.': './index.js' }
+  );
+});
+
+Deno.test(testName('getFileExports conditional exports (ESM)'), async () => {
+  const exports = npm.getPackageExports({
+    name: '',
+    exports: {
+      '.': {
+        'require': './index.js',
+        'import': './index.mjs',
+      },
+    },
+  }, true, true);
+
+  asserts.assertEquals(
+    exports,
+    { '.': './index.mjs' }
+  );
+});
+
+Deno.test(testName('getFileExports conditional alternative'), async () => {
+  const exports = npm.getPackageExports({
+    name: '',
+    exports: {
+      'require': './index.js',
+      'import': './index.mjs',
+    },
+  });
+
+  asserts.assertEquals(
+    exports,
+    { '.': './index.js' }
   );
 });
 
@@ -259,6 +359,70 @@ Deno.test(testName('getFileExports no entry'), async () => {
   asserts.assertEquals(
     exports,
     {}
+  );
+});
+
+Deno.test(testName('getFileExports no main'), async () => {
+  const exports = npm.getPackageExports({
+    name: '',
+    main: './index.js',
+    exports: { './foo.js': './foo.js' }
+  }, false);
+
+  asserts.assertEquals(
+    exports,
+    { './foo.js': './foo.js' }
+  );
+});
+
+Deno.test(testName('resolveExports entry'), async () => {
+  const exports = {
+    '.': './index.js',
+    './sub/path': './sub-path.js',
+    './prefix/': './prefix/',
+    './prefix2/*': './prefix2/*/*.js',
+    './prefix3/*.js': './prefix3/*/*.js',
+  };
+
+  const resolved = npm.resolveExports('.', exports);
+
+  asserts.assertEquals(
+    resolved,
+    './index.js'
+  );
+});
+
+Deno.test(testName('resolveExports normal'), async () => {
+  const exports = {
+    '.': './index.js',
+    './sub/path': './sub-path.js',
+    './prefix/': './prefix/',
+    './prefix2/*': './prefix2/*/*.js',
+    './prefix3/*.js': './prefix3/*/*.js',
+  };
+
+  const resolved = npm.resolveExports('./sub/path', exports);
+
+  asserts.assertEquals(
+    resolved,
+    './sub-path.js'
+  );
+});
+
+Deno.test(testName('resolveExports prefix'), async () => {
+  const exports = {
+    '.': './index.js',
+    './sub/path': './sub-path.js',
+    './prefix/': './directory/',
+    './prefix2/*': './directory2/*/*.js',
+    './prefix3/*.js': './directory3/*/*.js',
+  };
+
+  const resolved = npm.resolveExports('./prefix/index.js', exports);
+
+  asserts.assertEquals(
+    resolved,
+    './directory/index.js'
   );
 });
 
