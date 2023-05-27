@@ -31,7 +31,11 @@ const importmapMapToUrl = function(
 ): Record<string, URL> {
   const urlMap: Record<string, URL> = {};
   for(const key in map) {
-    urlMap[key] = getImportmapValueUrl(map[key], docRoot);
+    let newKey = key;
+    if(key.startsWith('./') || key.startsWith('../') || key.startsWith('/')) {
+      newKey = new URL(key, docRoot).href;
+    }
+    urlMap[newKey] = getImportmapValueUrl(map[key], docRoot);
   }
   return urlMap;
 }
@@ -84,6 +88,7 @@ const resolveWithImports = function(path: string, map: Record<string, URL>) {
 class ImportmapResolver {
   imports: Record<string, URL>;
   scopes: Scope[] | null;
+  docRoot: URL;
 
   constructor(importmap: Importmap, docRoot: URL) {
     this.imports = importmapMapToUrl(importmap?.imports ?? {}, docRoot);
@@ -93,10 +98,15 @@ class ImportmapResolver {
     } else {
       this.scopes = null;
     }
+    this.docRoot = docRoot;
   }
 
   // importer -> URL
   resolve(path: string, importerDirname: URL) {
+    if(path.startsWith('./') || path.startsWith('../') || path.startsWith('/')) {
+      path = new URL(path, this.docRoot).href;
+    }
+
     if(this.scopes !== null) {
       for(const scope of this.scopes) {
         if (scope.isFullUrl) {

@@ -66,7 +66,9 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
     cacheRoot.pathname += '/';
   }
   const importmapBasePath = posix.resolve(options.importmapBasePath ?? '.');
-  const importmapBaseUrl = posix.toFileUrl(importmapBasePath);
+  const importmapBaseUrl = posix.toFileUrl(
+    importmapBasePath.endsWith('/') ? importmapBasePath : `${importmapBasePath}/`
+  );
   const importmapResolver = new ImportmapResolver(
     options.importmap ?? {},
     importmapBaseUrl,
