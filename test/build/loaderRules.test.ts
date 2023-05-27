@@ -2,7 +2,7 @@ import { asserts, esbuild, fs, posix } from "../../deps.ts";
 import esbuildCachePlugin from '../../mod.ts';
 import { denoRunScript } from './util.ts';
 
-const testName = (name: string) => `[polyfill] ${name}`;
+const testName = (name: string) => `[loader rules] ${name}`;
 const cacheRootPath = '/tmp/net.ts7m.esbuild-cache-plugin/';
 const cachePath = posix.join(cacheRootPath, 'cache');
 const srcPath = posix.join(cacheRootPath, 'src');
@@ -16,7 +16,7 @@ const modulePath = (path: string) => {
   return posix.join(cachePath, 'npm', 'registry.npmjs.org', path);
 }
 
-Deno.test(testName("Polyfill #1"), async () => {
+Deno.test(testName("Loader #1"), async () => {
   await cleanCache();
   await fs.ensureDir(modulePath('module/1.0.0/'));
   await fs.ensureDir(srcPath);
