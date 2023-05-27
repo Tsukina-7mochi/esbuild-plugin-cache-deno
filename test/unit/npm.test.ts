@@ -302,7 +302,7 @@ Deno.test(testName('getFileExports main override'), async () => {
   );
 });
 
-Deno.test(testName('getFileExports conditional exports'), async () => {
+Deno.test(testName('getFileExports conditional exports (CJS)'), async () => {
   const exports = npm.getPackageExports({
     name: '',
     exports: {
@@ -311,13 +311,31 @@ Deno.test(testName('getFileExports conditional exports'), async () => {
         'import': './index.mjs',
       },
     },
-  }, true);
+  }, true, false);
 
   asserts.assertEquals(
     exports,
     { '.': './index.js' }
   );
 });
+
+Deno.test(testName('getFileExports conditional exports (ESM)'), async () => {
+  const exports = npm.getPackageExports({
+    name: '',
+    exports: {
+      '.': {
+        'require': './index.js',
+        'import': './index.mjs',
+      },
+    },
+  }, true, true);
+
+  asserts.assertEquals(
+    exports,
+    { '.': './index.mjs' }
+  );
+});
+
 Deno.test(testName('getFileExports conditional alternative'), async () => {
   const exports = npm.getPackageExports({
     name: '',

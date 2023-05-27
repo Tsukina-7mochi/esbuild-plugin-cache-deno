@@ -111,7 +111,7 @@ const findClosestPackageScope = async function(url: URL, cacheRoot: URL) {
   return new URL('.', packageJsonUrl);
 }
 
-const getPackageExports = function(packageJSON: PartialPackageJSON, useMain = true) {
+const getPackageExports = function(packageJSON: PartialPackageJSON, useMain = true, preferImport = false) {
   const exports: Record<string, string> = {};
   if(useMain && typeof packageJSON['main'] === 'string') {
     exports['.'] = packageJSON['main'];
@@ -138,7 +138,15 @@ const getPackageExports = function(packageJSON: PartialPackageJSON, useMain = tr
             exports[key] = value[0];
           }
         } else {
-          value = value['require'] ?? value['default'];
+          if(preferImport) {
+            value = value['import']
+              ?? value['require']
+              ?? value['default'];
+          } else {
+            value = value['require']
+              ?? value['import']
+              ?? value['default'];
+          }
           if(typeof value === 'string') {
             exports[key] = value;
           }
@@ -146,7 +154,16 @@ const getPackageExports = function(packageJSON: PartialPackageJSON, useMain = tr
       }
     } else if(keyTypes.every(v => !v)) {
       // keys are conditions
-      const value = rawExports['require'] ?? rawExports['default'];
+      let value = null;
+      if(preferImport) {
+        value = rawExports['import']
+          ?? rawExports['require']
+          ?? rawExports['default'];
+      } else {
+        value = rawExports['require']
+          ?? rawExports['import']
+          ?? rawExports['default'];
+      }
       if(typeof value === 'string') {
         exports['.'] = value;
       }
@@ -208,9 +225,9 @@ const resolveAsDirectory = async function(
     const packageJSON = JSON.parse(content) as PartialPackageJSON;
     const exports = getPackageExports(packageJSON);
     const main = exports['.'];
+    const mainURL = new URL(main, url);
 
     if(typeof main === 'string') {
-      const mainURL = new URL(main, url);
       return await resolveAsFile(mainURL, cacheRoot)
         ?? await resolveIndex(mainURL, cacheRoot)
         ?? await resolveIndex(url, cacheRoot);
@@ -315,7 +332,7 @@ const resolveImport = async function(
   }
   const packageJSONText = await Deno.readTextFile(toCacheURL(new URL(`npm:/${pkgToImportFullName}/package.json`), cacheRoot));
   const packageJSON = JSON.parse(packageJSONText) as PartialPackageJSON;
-  const exports = getPackageExports(packageJSON);
+  const exports = getPackageExports(packageJSON, true, importer.protocol === 'file:');
   if(path.length === 0) {
     if(exports['.'] === undefined) {
       return null;
