@@ -1,4 +1,4 @@
-import { esbuild, posix, crypto } from './deps.ts';
+import { crypto, esbuild, posix } from './deps.ts';
 import type { Importmap } from './src/importmap.ts';
 import type { LockMap } from './src/types.ts';
 import ImportmapResolver from './src/importmap.ts';
@@ -247,11 +247,14 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
 
           try {
             const contents = await Deno.readFile(pluginData.cachePath);
-            const hashArrayBuffer = await crypto.subtle.digest('SHA-256', contents);
+            const hashArrayBuffer = await crypto.subtle.digest(
+              'SHA-256',
+              contents,
+            );
             const hashView = new Uint8Array(hashArrayBuffer);
             const hashHexString = Array.from(hashView)
-            .map((b) => b.toString(16).padStart(2, '0'))
-            .join('');
+              .map((b) => b.toString(16).padStart(2, '0'))
+              .join('');
 
             if (hashHexString !== pluginData.fileHash) {
               return {
