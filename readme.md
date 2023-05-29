@@ -79,18 +79,22 @@ import * as react from "npm:react";
 console.log(react.version);
 ```
 
-You can use polyfill to replace or remove some modules like Node.js's core modules.
+You can replace or remove some modules like Node.js's core modules using import-maps and custom loader (details are in the next section).
 
 ```typescript
 esbuildCachePlugin({
   lockMap,
   denoCacheDirectory: '/home/[user]/.cache/deno',
-  npmModulePolyfill: {
-    // replace "http" module
-    http: { moduleName: '/src/polyfill/http.ts' },
-    // remove "util" module
-    util: { loader: 'empty' },
+  importmap: {
+    imports: {
+      // replace "http" module to polyfill
+      "node:http": "/src/polyfill/http.ts",
+    },
   },
+  loaderRules: [
+    // remote "util" module
+    { test: /^node:util/, loader: 'empty' },
+  ],
 }),
 ```
 
