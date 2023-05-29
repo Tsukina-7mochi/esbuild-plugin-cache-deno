@@ -14,7 +14,9 @@
   "lint": {
     "files": {
       "include": [
-        "mod.ts"
+        "mod.ts",
+      "deps.ts",
+      "example/"
       ]
     },
     "rules": {
@@ -24,20 +26,25 @@
     }
   },
   "fmt": {
-    "files": {
-      "include": [
-        "mod.ts"
-      ]
-    },
-    "options": {
-      "indentWidth": 2,
-      "lineWidth": 80,
-      "proseWrap": "always",
-      "singleQuote": true,
-      "useTabs": false
-    }
+    "include": [
+      "mod.ts",
+      "deps.ts",
+      "example/"
+    ],
+    "indentWidth": 2,
+    "lineWidth": 80,
+    "proseWrap": "always",
+    "singleQuote": true,
+    "useTabs": false
   },
   "tasks": {
-    "build": "deno run -A ./example/build.ts"
+    "build": "bash ./example/cache.sh && deno run -A ./example/build.ts",
+    "test": "bash ./test/build/cache.sh && deno test -A",
+    "test:unit": "deno test -A test/unit",
+    "test:build": "bash ./test/build/cache.sh && deno test -A test/build",
+    "debug:build": "bash ./example/cache.sh && deno run -A --inspect-brk ./example/build.ts",
+    "debug:test": "bash ./test/cache.sh && deno test -A --inspect-brk",
+    "debug:test:unit": "deno test -A --inspect-brk test/unit",
+    "debug:test:build": "bash ./test/build/cache.sh && deno test -A --inspect-brk test/build"
   }
 }

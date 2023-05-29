@@ -1,6 +1,9 @@
 import { esbuild } from '../deps.ts';
 import esbuildCachePlugin from '../mod.ts';
-import importmap from "./import_map.json" assert { type: "json" };
+import importmap from './import_map.json' assert { type: 'json' };
+import lockMap from './lock.json' assert { type: 'json' };
+
+const denoPath = await esbuildCachePlugin.util.getDenoDir();
 
 const config: esbuild.BuildOptions = {
   entryPoints: [
@@ -18,8 +21,12 @@ const config: esbuild.BuildOptions = {
   platform: 'browser',
   plugins: [
     esbuildCachePlugin({
-      directory: './example/cache',
-      importmap
+      lockMap,
+      denoCacheDirectory: denoPath,
+      importmap,
+      loaderRules: [
+        { test: /^node:util/, loader: 'empty' },
+      ],
     }),
   ],
 };
