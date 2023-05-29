@@ -74,9 +74,8 @@ You can use npm modules just like using them in Deno:
 
 ```typescript
 // src/main.ts
-import * as react from "npm:react";
-
-console.log(react.version);
+import * as preact from "npm:preact";
+import * as preact from "npm:/preact/hooks";
 ```
 
 You can replace or remove some modules like Node.js's core modules using import-maps and custom loader (details are in the next section).
