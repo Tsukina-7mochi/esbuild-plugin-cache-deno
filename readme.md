@@ -1,6 +1,6 @@
 # esbuild Cache Plugin for Deno
 
-esbuild Cache Plugin for Deno is an esbuild plugin to resolve remote (http/https) and even npm modules using Deno's cache.
+esbuild Cache Plugin for Deno is an esbuild plugin to resolve remote (HTTP/HTTPS) and even npm modules using Deno's cache.
 
 ## Features
 
@@ -68,7 +68,7 @@ const denoPath = await esbuildCachePlugin.util.getDenoDir();
 
 Alternatively, you can pass them from CLI argument using shell scripts.
 
-### Using NPM Modules
+### Using npm Modules
 
 You can use npm modules just like using them in Deno:
 
