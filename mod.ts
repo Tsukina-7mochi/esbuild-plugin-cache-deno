@@ -1,4 +1,4 @@
-import { esbuild, posix, sha256 } from './deps.ts';
+import { esbuild, posix, crypto } from './deps.ts';
 import type { Importmap } from './src/importmap.ts';
 import type { LockMap } from './src/types.ts';
 import ImportmapResolver from './src/importmap.ts';
@@ -247,10 +247,13 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
 
           try {
             const contents = await Deno.readFile(pluginData.cachePath);
-            const hashContext = new sha256.Sha256();
-            const contentsHash = hashContext.update(contents).toString();
+            const hashArrayBuffer = await crypto.subtle.digest('SHA-256', contents);
+            const hashView = new Uint8Array(hashArrayBuffer);
+            const hashHexString = Array.from(hashView)
+            .map((b) => b.toString(16).padStart(2, '0'))
+            .join('');
 
-            if (contentsHash !== pluginData.fileHash) {
+            if (hashHexString !== pluginData.fileHash) {
               return {
                 errors: [{ text: `Outdated cache detected for ${args.path}` }],
               };

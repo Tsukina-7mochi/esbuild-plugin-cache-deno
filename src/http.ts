@@ -1,4 +1,4 @@
-import { sha256 } from "../deps.ts";
+import { crypto } from "../deps.ts";
 import ImportmapResolver from "./importmap.ts";
 
 const resolveImport = function(
@@ -34,9 +34,15 @@ const resolveImport = function(
 const toCacheURL = function(url: URL, cacheRoot: URL) {
   const protocol = url.protocol.slice(0, -1);
   const hostname = url.hostname;
-  const hashContext = new sha256.Sha256();
-  const pathHash = hashContext.update(url.pathname).toString();
-  const path = ['deps', protocol, hostname, pathHash].join('/');
+  // calculate hash of pathname
+  const pathCodeArray = [...url.pathname].map(char => char.charCodeAt(0));
+  const pathArray = new Uint8Array(pathCodeArray);
+  const pathHashArray = crypto.subtle.digestSync('SHA-256', pathArray);
+  const pathHashView = new Uint8Array(pathHashArray);
+  const pathHashHexString = Array.from(pathHashView)
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+  const path = ['deps', protocol, hostname, pathHashHexString].join('/');
 
   return new URL(path, cacheRoot);
 }
