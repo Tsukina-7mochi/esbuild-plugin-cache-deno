@@ -108,6 +108,14 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
           ? new RegExp(`^${importKey}`, 'i')
           : new RegExp(`^${importKey}$`, 'i');
         build.onResolve({ filter }, (args) => {
+          if (
+            args.namespace === remoteCacheNamespace ||
+            args.namespace === npmCacheNamespace
+          ) {
+            // Within the namespace, each resolver is responsible for importmap resolution
+            return null;
+          }
+
           const url = importmapResolver.resolve(
             args.path,
             new URL('.', posix.toFileUrl(args.importer)),
