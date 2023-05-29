@@ -165,3 +165,38 @@ esbuildCachePlugin({
   ],
 }),
 ```
+
+## npm Module Support
+
+Reference: [Modules: Packages | Node.js v20.2.0 Documentation](https://nodejs.org/api/packages.html#exports-sugar)
+
+|       Specification       | Support |
+| ------------------------- | :-----: |
+| Main entry point          |    ✅    |
+| Subpath exports           | Partial |
+| Subpath imports           |    -    |
+| Conditional exports       |    ✅    |
+| Nested conditions         |    ✅    |
+| Resolving user conditions |    -    |
+| Package self-referencing  |    ✅    |
+
+### Subpath exports support
+
+Reference: [Package exports | webpack](https://webpack.js.org/guides/package-exports/#support)
+
+| Specification | Support |
+| --- | :---: |
+| `"."` property | ✅ |
+| Normal property | ✅ |
+| Property ending with `/` | ✅ |
+| Property ending with `*` | - |
+| Alternatives | - |
+| Abbreviation only path | ✅ |
+| Abbreviation only conditions | ✅ |
+| Conditional syntax | ✅ |
+| Nested conditional syntax | ✅ |
+| Conditions order | - |
+| `"default"` condition | ✅ |
+| Path order | - |
+| Error when not mapped | - |
+| Error when mixind conditions and paths | ✅ |
