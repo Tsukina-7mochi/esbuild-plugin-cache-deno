@@ -1,4 +1,4 @@
-name: lint and check format
+name: lint, check format and test
 
 on: push
 
@@ -20,3 +20,6 @@ jobs:
 
       - name: Check format
         run: deno fmt --check
+
+      - name: Run tests
+        run: deno task test
