@@ -12,13 +12,10 @@
     ]
   },
   "lint": {
-    "files": {
-      "include": [
-        "mod.ts",
-      "deps.ts",
-      "example/"
-      ]
-    },
+    "include": [
+      "mod.ts",
+      "deps.ts"
+    ],
     "rules": {
       "tags": [
         "recommended"
