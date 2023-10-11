@@ -1,5 +1,5 @@
 import { fs } from "../deps.ts";
-import type { LockMap, PartialPackageJSON } from "./types.ts";
+import type { LockMapV3, PartialPackageJSON } from "./types.ts";
 import ImportmapResolver from "./importmap.ts";
 
 const coreModuleNames = [
@@ -242,7 +242,7 @@ const resolveImport = async function(
   moduleName: string,
   importer: URL,
   cacheRoot: URL,
-  lockMap: LockMap,
+  lockMap: LockMapV3,
   importmapResolver?: ImportmapResolver
 ) {
   const importerDirname = new URL('.', importer);
@@ -275,6 +275,15 @@ const resolveImport = async function(
     // resolve imports
   }
 
+  if(importer.protocol === 'file:' && !moduleName.includes('@')) {
+    for(const pkg of Object.keys(lockMap.packages?.specifiers ?? {})) {
+      if(pkg.startsWith(moduleName)) {
+        moduleName = pkg;
+        break;
+      }
+    }
+  }
+
   const moduleNamePath = moduleName.includes(':')
   ? moduleName.slice(moduleName.lastIndexOf(':') + 1)
   : moduleName;
@@ -284,10 +293,10 @@ const resolveImport = async function(
 
   let dependencies: Record<string, string> | undefined;
   if(importer.protocol === 'file:') {
-    dependencies = lockMap.npm?.specifiers;
+    dependencies = lockMap.packages?.specifiers;
   } else {
     const pkgFullName = normalizeNodeNpmUrl(importer).pathname.split('/')[1];
-    dependencies = lockMap.npm?.packages?.[pkgFullName]?.dependencies;
+    dependencies = lockMap.packages?.npm?.[pkgFullName]?.dependencies;
   }
 
   // resolve self package exports
@@ -325,8 +334,9 @@ const resolveImport = async function(
     return null;
   }
   const pkgToImportFullName = importer.protocol === 'file:'
-    ? dependencies[pkgFullName]
+    ? dependencies[`npm:${pkgFullName}`]?.slice(4)
     : dependencies[pkgName];
+
   if(typeof pkgToImportFullName !== 'string') {
     return null;
   }

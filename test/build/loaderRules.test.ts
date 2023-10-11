@@ -47,12 +47,12 @@ Deno.test(testName("Loader #1"), async () => {
       plugins: [
         esbuildCachePlugin({
           lockMap: {
-            version: "2",
-            npm: {
+            version: "3",
+            packages: {
               specifiers: {
-                'module@1.0.0': 'module@1.0.0',
+                'npm:module@1.0.0': 'npm:module@1.0.0',
               },
-              packages: {
+              npm: {
                 'module@1.0.0': {
                   integrity: 'SHA_HASH_HERE',
                   dependencies: {},

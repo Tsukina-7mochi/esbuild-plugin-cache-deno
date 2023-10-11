@@ -1,6 +1,6 @@
 import { crypto, esbuild, posix } from './deps.ts';
 import type { Importmap } from './src/importmap.ts';
-import type { LockMap } from './src/types.ts';
+import type { LockMapV3 } from './src/types.ts';
 import ImportmapResolver from './src/importmap.ts';
 import * as http from './src/http.ts';
 import * as npm from './src/npm.ts';
@@ -12,7 +12,7 @@ type LoaderRules = {
 }[];
 
 interface Options {
-  lockMap: LockMap;
+  lockMap: LockMapV3;
   denoCacheDirectory: string;
   importmap?: Importmap;
   importmapBasePath?: string;
@@ -53,7 +53,7 @@ const getRedirectedLocation = async function (url: string) {
 };
 
 function esbuildCachePlugin(options: Options): esbuild.Plugin {
-  if (options.lockMap.version !== '2') {
+  if (options.lockMap.version !== '3') {
     throw Error(
       `Lock map version ${options.lockMap.version} is not supported.`,
     );
