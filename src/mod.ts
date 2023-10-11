@@ -23,6 +23,14 @@ interface Options {
   loaderRules?: LoaderRules;
 }
 
+interface NormalizedOptions {
+  lockMap: LockMapV3,
+  denoCacheDirectory: string;
+  importMap?: ImportMap;
+  importMapBasePath?: string;
+  loaderRules?: LoaderRules;
+}
+
 interface RemoteCachePluginData {
   loader: esbuild.Loader | undefined;
   cachePath: string;
@@ -45,6 +53,16 @@ const defaultLoaderRules: LoaderRules = [
   { test: /\.txt$/, loader: 'text' },
 ];
 
+const normalizeOptions = function(options: Options): NormalizedOptions {
+  return {
+    lockMap: options.lockMap,
+    denoCacheDirectory: options.denoCacheDirectory,
+    importMap: options.importMap ?? options.importmap,
+    importMapBasePath: options.importMapBasePath ?? options.importmapBasePath,
+    loaderRules: options.loaderRules,
+  };
+};
+
 const getRedirectedLocation = async function (url: string) {
   const res = await fetch(url, { redirect: 'manual' });
   // Close response body to prevent resource leakage
@@ -56,49 +74,51 @@ const getRedirectedLocation = async function (url: string) {
   return res.headers.get('location');
 };
 
+const remoteCacheNamespace = 'net.ts7m.esbuild-cache-plugin.general';
+const npmCacheNamespace = 'net.ts7m.esbuild-cache-plugin.npm';
+
+
 function esbuildCachePlugin(options: Options): esbuild.Plugin {
-  if (options.lockMap.version !== '3') {
-    throw Error(
-      `Lock map version ${options.lockMap.version} is not supported.`,
-    );
-  }
+  // TODO: rename normalizedOptions to options
+  const normalizedOptions = normalizeOptions(options);
 
-  options.importMap = options.importMap ?? options.importmap;
-  options.importMapBasePath = options.importMapBasePath ?? options.importmapBasePath;
-
-  const remoteCacheNamespace = 'net.ts7m.esbuild-cache-plugin.general';
-  const npmCacheNamespace = 'net.ts7m.esbuild-cache-plugin.npm';
-  const cacheRoot = posix.toFileUrl(options.denoCacheDirectory);
+  const lockMap = {
+    version: normalizedOptions.lockMap.version,
+    remote: normalizedOptions.lockMap.remote ?? {},
+    redirects: normalizedOptions.lockMap.redirects ?? {},
+    packages: {
+      specifiers: normalizedOptions.lockMap.packages?.specifiers ?? {},
+      npm: normalizedOptions.lockMap.packages?.npm ?? {},
+    },
+  };
+  const cacheRoot = posix.toFileUrl(normalizedOptions.denoCacheDirectory);
   if (!cacheRoot.pathname.endsWith('/')) {
     cacheRoot.pathname += '/';
   }
-  const importMapBasePath = posix.resolve(options.importMapBasePath ?? '.');
-  const importMapBaseUrl = posix.toFileUrl(
-    importMapBasePath.endsWith('/')
-      ? importMapBasePath
-      : `${importMapBasePath}/`,
-  );
-  const importMapResolver = new ImportMapResolver(
-    options.importMap ?? {},
-    importMapBaseUrl,
-  );
-  const lockMap = {
-    remote: {},
-    npm: { specifiers: {}, packages: {} },
-    ...options.lockMap,
-  };
-
+  const importMap = normalizedOptions.importMap ?? {};
+  const importMapBasePath_ = posix.resolve(normalizedOptions.importMapBasePath ?? '.');
+  const importMapBasePath = importMapBasePath_.endsWith('/') ? importMapBasePath_ : `${importMapBasePath_}/`
+  const importMapBaseUrl = posix.toFileUrl(importMapBasePath);
+  const importMapResolver = new ImportMapResolver(importMap, importMapBaseUrl);
   const loaderRules = [
-    ...(options.loaderRules ?? []),
+    // Rules that appear early take precedence
+    ...(normalizedOptions.loaderRules ?? []),
     ...defaultLoaderRules,
   ];
-  const getLoader = function (path: string) {
+
+  if (lockMap.version !== '3') {
+    throw Error(
+      `Lock map version ${lockMap.version} is not supported.`,
+    );
+  }
+
+  const getLoader = function (path: string): esbuild.Loader | null {
     for (const rule of loaderRules) {
       if (rule.test.test(path)) {
         return rule.loader;
       }
     }
-    return undefined;
+    return null;
   };
 
   return {
@@ -106,8 +126,8 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
     setup(build) {
       // resolve based on import map
       const importKeys = new Set([
-        ...Object.keys(options.importMap?.imports ?? {}),
-        ...Object.values(options.importMap?.scopes ?? {})
+        ...Object.keys(importMap?.imports ?? {}),
+        ...Object.values(importMap?.scopes ?? {})
           .flatMap((map) => Object.keys(map)),
       ]);
       for (const importKey of importKeys) {
@@ -172,7 +192,7 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
         const cachePath = posix.fromFileUrl(
           http.toCacheURL(fileUrl, cacheRoot),
         );
-        const loader = getLoader(fileUrl.href);
+        const loader = getLoader(fileUrl.href) ?? undefined;
         const fileHash = lockMap.remote[fileUrl.href];
         return {
           path: fileUrl.href,
@@ -221,7 +241,7 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
           return null;
         }
 
-        const loader = getLoader(url.href);
+        const loader = getLoader(url.href) ?? undefined;
         if (url.protocol === 'node:' && loader !== 'empty') {
           return {
             errors: [{ text: 'Cannot import Node.js\'s core modules.' }],

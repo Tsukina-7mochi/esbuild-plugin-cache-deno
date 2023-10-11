@@ -17,7 +17,7 @@ interface LockMapV3 {
   remote?: { [key: string]: string };
   redirects?: { [key: string]: string };
   packages?: {
-    specifiers: { [key: string]: string };
+    specifiers?: { [key: string]: string };
     npm?: {
       [key: string]: {
         integrity: string;
