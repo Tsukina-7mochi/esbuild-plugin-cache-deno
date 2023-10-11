@@ -1,10 +1,10 @@
 import { asserts } from '../../deps.ts';
-import ImportmapResolver from '../../src/importmap.ts';
+import ImportMapResolver from '../../src/importMap.ts';
 
-const testName = (name: string) => `[importmap] ${name}`;
+const testName = (name: string) => `[importMap] ${name}`;
 
 Deno.test(testName('Simple import relative'), () => {
-  const resolver = new ImportmapResolver(
+  const resolver = new ImportMapResolver(
     {
       imports: {
         'zzz': './xxx/yyy/zzz.js',
@@ -18,7 +18,7 @@ Deno.test(testName('Simple import relative'), () => {
 });
 
 Deno.test(testName('Simple import absolute'), () => {
-  const resolver = new ImportmapResolver(
+  const resolver = new ImportMapResolver(
     {
       imports: {
         'zzz': '/xxx/yyy/zzz.js',
@@ -32,7 +32,7 @@ Deno.test(testName('Simple import absolute'), () => {
 });
 
 Deno.test(testName('Simple import URL'), () => {
-  const resolver = new ImportmapResolver(
+  const resolver = new ImportMapResolver(
     {
       imports: {
         'module': 'https://example.com/path/to/file.js',
@@ -46,7 +46,7 @@ Deno.test(testName('Simple import URL'), () => {
 });
 
 Deno.test(testName('Simple import npm URL'), () => {
-  const resolver = new ImportmapResolver(
+  const resolver = new ImportMapResolver(
     {
       imports: {
         'module': 'npm:/module@1.0.0/index.js',
@@ -60,7 +60,7 @@ Deno.test(testName('Simple import npm URL'), () => {
 });
 
 Deno.test(testName('Path import relative'), () => {
-  const resolver = new ImportmapResolver(
+  const resolver = new ImportMapResolver(
     {
       imports: {
         'yyy/': './xxx/yyy/',
@@ -74,7 +74,7 @@ Deno.test(testName('Path import relative'), () => {
 });
 
 Deno.test(testName('Path import URL'), () => {
-  const resolver = new ImportmapResolver(
+  const resolver = new ImportMapResolver(
     {
       imports: {
         'module/': 'https://example.com/path/to/module/',
@@ -88,7 +88,7 @@ Deno.test(testName('Path import URL'), () => {
 });
 
 Deno.test(testName('Scope match'), () => {
-  const resolver = new ImportmapResolver(
+  const resolver = new ImportMapResolver(
     {
       imports: {
         'module': 'https://example.com/path/to/module/file.js',
@@ -107,7 +107,7 @@ Deno.test(testName('Scope match'), () => {
 });
 
 Deno.test(testName('Scope default'), () => {
-  const resolver = new ImportmapResolver(
+  const resolver = new ImportMapResolver(
     {
       imports: {
         'module': 'https://example.com/path/to/module/file.js',
@@ -126,7 +126,7 @@ Deno.test(testName('Scope default'), () => {
 });
 
 Deno.test(testName('Scope priority'), () => {
-  const resolver = new ImportmapResolver(
+  const resolver = new ImportMapResolver(
     {
       imports: {
         'module': 'https://example.com/path/to/module/file.js',
@@ -151,7 +151,7 @@ Deno.test(testName('Scope priority'), () => {
 });
 
 Deno.test(testName('Scope URL path match'), () => {
-  const resolver = new ImportmapResolver(
+  const resolver = new ImportMapResolver(
     {
       imports: {
         'module': 'https://example.com/path/to/module/file.js',
@@ -170,7 +170,7 @@ Deno.test(testName('Scope URL path match'), () => {
 });
 
 Deno.test(testName('Scope URL path default'), () => {
-  const resolver = new ImportmapResolver(
+  const resolver = new ImportMapResolver(
     {
       imports: {
         'module': 'https://example.com/path/to/module/file.js',

@@ -1,6 +1,6 @@
 import { fs } from "../deps.ts";
 import type { LockMapV3, PartialPackageJSON } from "./types.ts";
-import ImportmapResolver from "./importmap.ts";
+import ImportMapResolver from "./importMap.ts";
 
 const coreModuleNames = [
   'assert',
@@ -243,16 +243,16 @@ const resolveImport = async function(
   importer: URL,
   cacheRoot: URL,
   lockMap: LockMapV3,
-  importmapResolver?: ImportmapResolver
+  importMapResolver?: ImportMapResolver
 ) {
   const importerDirname = new URL('.', importer);
 
   if(moduleName.startsWith('node:')) {
-    return importmapResolver?.resolve(moduleName, importerDirname)
+    return importMapResolver?.resolve(moduleName, importerDirname)
       ?? new URL(moduleName);
   }
   if(coreModuleNames.includes(moduleName)) {
-    return importmapResolver?.resolve(`node:${moduleName}`, importerDirname)
+    return importMapResolver?.resolve(`node:${moduleName}`, importerDirname)
       ?? new URL(`node:${moduleName}`);
   }
 
@@ -267,7 +267,7 @@ const resolveImport = async function(
       return null;
     }
 
-    return importmapResolver?.resolve(resolved.href, importerDirname)
+    return importMapResolver?.resolve(resolved.href, importerDirname)
       ?? resolved;
   }
 
@@ -311,13 +311,13 @@ const resolveImport = async function(
         if(path.length === 0) {
           if(typeof exports['.'] === 'string') {
             const url = new URL(exports['.'], `npm:/${importerPkgFullName}/`);
-            return importmapResolver?.resolve(url.href, importerDirname) ?? url;
+            return importMapResolver?.resolve(url.href, importerDirname) ?? url;
           }
         } else {
           const exportResolved = resolveExports(`./${path.join('/')}`, exports);
           if(typeof exportResolved === 'string') {
             const url = new URL(exportResolved, `npm:/${importerPkgFullName}/`);
-            return importmapResolver?.resolve(url.href, importerDirname) ?? url;
+            return importMapResolver?.resolve(url.href, importerDirname) ?? url;
           }
         }
       }
@@ -348,16 +348,16 @@ const resolveImport = async function(
       return null;
     }
     const url = new URL(exports['.'], `npm:/${pkgToImportFullName}/`);
-    return importmapResolver?.resolve(url.href, importerDirname) ?? url;
+    return importMapResolver?.resolve(url.href, importerDirname) ?? url;
   } else {
     const exportResolved = resolveExports(`./${path.join('/')}`, exports);
     if(typeof exportResolved === 'string') {
       const url = new URL(exportResolved, `npm:/${pkgToImportFullName}/`);
-      return importmapResolver?.resolve(url.href, importerDirname) ?? url;
+      return importMapResolver?.resolve(url.href, importerDirname) ?? url;
     } else {
       // default behavior
       const url = new URL(`npm:/${[pkgToImportFullName, ...path].join('/')}`);
-      return importmapResolver?.resolve(url.href, importerDirname) ?? url;
+      return importMapResolver?.resolve(url.href, importerDirname) ?? url;
     }
   }
 }

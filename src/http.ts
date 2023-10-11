@@ -1,10 +1,10 @@
 import { crypto } from "../deps.ts";
-import ImportmapResolver from "./importmap.ts";
+import ImportMapResolver from "./importMap.ts";
 
 const resolveImport = function(
   moduleName: string,
   importer: URL,
-  importmapResolver?: ImportmapResolver
+  importMapResolver?: ImportMapResolver
 ) {
   let url = null;
   try {
@@ -19,12 +19,12 @@ const resolveImport = function(
     }
   }
 
-  if(importmapResolver !== undefined) {
+  if(importMapResolver !== undefined) {
     const importerDirname = new URL('.', importer);
     if(url === null) {
-      url = importmapResolver.resolve(moduleName, importerDirname);
+      url = importMapResolver.resolve(moduleName, importerDirname);
     } else {
-      url = importmapResolver.resolve(url.href, importerDirname);
+      url = importMapResolver.resolve(url.href, importerDirname);
     }
   }
 

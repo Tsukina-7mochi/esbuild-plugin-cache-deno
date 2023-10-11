@@ -1,7 +1,7 @@
 import { crypto, esbuild, posix } from '../deps.ts';
-import type { Importmap } from './importmap.ts';
+import type { ImportMap } from './importMap.ts';
 import type { LockMapV3 } from './types.ts';
-import ImportmapResolver from './importmap.ts';
+import ImportMapResolver from './importMap.ts';
 import * as http from './http.ts';
 import * as npm from './npm.ts';
 import * as util from '../util.ts';
@@ -14,8 +14,12 @@ type LoaderRules = {
 interface Options {
   lockMap: LockMapV3;
   denoCacheDirectory: string;
-  importmap?: Importmap;
+  /** @deprecated */
+  importmap?: ImportMap;
+  importMap?: ImportMap;
+  /** @deprecated */
   importmapBasePath?: string;
+  importMapBasePath?: string;
   loaderRules?: LoaderRules;
 }
 
@@ -59,21 +63,24 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
     );
   }
 
+  options.importMap = options.importMap ?? options.importmap;
+  options.importMapBasePath = options.importMapBasePath ?? options.importmapBasePath;
+
   const remoteCacheNamespace = 'net.ts7m.esbuild-cache-plugin.general';
   const npmCacheNamespace = 'net.ts7m.esbuild-cache-plugin.npm';
   const cacheRoot = posix.toFileUrl(options.denoCacheDirectory);
   if (!cacheRoot.pathname.endsWith('/')) {
     cacheRoot.pathname += '/';
   }
-  const importmapBasePath = posix.resolve(options.importmapBasePath ?? '.');
-  const importmapBaseUrl = posix.toFileUrl(
-    importmapBasePath.endsWith('/')
-      ? importmapBasePath
-      : `${importmapBasePath}/`,
+  const importMapBasePath = posix.resolve(options.importMapBasePath ?? '.');
+  const importMapBaseUrl = posix.toFileUrl(
+    importMapBasePath.endsWith('/')
+      ? importMapBasePath
+      : `${importMapBasePath}/`,
   );
-  const importmapResolver = new ImportmapResolver(
-    options.importmap ?? {},
-    importmapBaseUrl,
+  const importMapResolver = new ImportMapResolver(
+    options.importMap ?? {},
+    importMapBaseUrl,
   );
   const lockMap = {
     remote: {},
@@ -99,8 +106,8 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
     setup(build) {
       // resolve based on import map
       const importKeys = new Set([
-        ...Object.keys(options.importmap?.imports ?? {}),
-        ...Object.values(options.importmap?.scopes ?? {})
+        ...Object.keys(options.importMap?.imports ?? {}),
+        ...Object.values(options.importMap?.scopes ?? {})
           .flatMap((map) => Object.keys(map)),
       ]);
       for (const importKey of importKeys) {
@@ -112,11 +119,11 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
             args.namespace === remoteCacheNamespace ||
             args.namespace === npmCacheNamespace
           ) {
-            // Within the namespace, each resolver is responsible for importmap resolution
+            // Within the namespace, each resolver is responsible for importMap resolution
             return null;
           }
 
-          const url = importmapResolver.resolve(
+          const url = importMapResolver.resolve(
             args.path,
             new URL('.', posix.toFileUrl(args.importer)),
           );
@@ -128,14 +135,14 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
             return build.resolve(posix.fromFileUrl(url), {
               kind: args.kind,
               importer: args.importer,
-              resolveDir: importmapBasePath,
+              resolveDir: importMapBasePath,
             });
           }
 
           return build.resolve(url.href, {
             kind: args.kind,
             importer: args.importer,
-            resolveDir: importmapBasePath,
+            resolveDir: importMapBasePath,
           });
         });
       }
@@ -180,7 +187,7 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
           const fileUrl = http.resolveImport(
             args.path,
             new URL(args.importer),
-            importmapResolver,
+            importMapResolver,
           );
           if (fileUrl === null) {
             return null;
@@ -208,7 +215,7 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
           importerUrl,
           cacheRoot,
           lockMap,
-          importmapResolver,
+          importMapResolver,
         );
         if (url === null) {
           return null;

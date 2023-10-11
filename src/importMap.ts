@@ -1,4 +1,4 @@
-interface Importmap {
+interface ImportMap {
   imports?: Record<string, string>;
   scopes?: {
     [key: string]: Record<string, string>;
@@ -12,7 +12,7 @@ interface Scope {
   map: Record<string, URL>;
 }
 
-const getImportmapValueUrl = function(value: string, docRoot: URL): URL {
+const getImportMapValueUrl = function(value: string, docRoot: URL): URL {
   try {
     return new URL(value);
   } catch {
@@ -21,11 +21,11 @@ const getImportmapValueUrl = function(value: string, docRoot: URL): URL {
     } else if(value.startsWith('./') || value.startsWith('../')) {
       return new URL(value, docRoot);
     }
-    throw Error(`${value} is not valid for importmap value.`);
+    throw Error(`${value} is not valid for importMap value.`);
   }
 }
 
-const importmapMapToUrl = function(
+const importMapMapToUrl = function(
   map: Record<string, string>,
   docRoot: URL
 ): Record<string, URL> {
@@ -35,13 +35,13 @@ const importmapMapToUrl = function(
     if(key.startsWith('./') || key.startsWith('../') || key.startsWith('/')) {
       newKey = new URL(key, docRoot).href;
     }
-    urlMap[newKey] = getImportmapValueUrl(map[key], docRoot);
+    urlMap[newKey] = getImportMapValueUrl(map[key], docRoot);
   }
   return urlMap;
 }
 
-const getImportmapScopes = function(importmap: Importmap, docRoot: URL): Scope[] {
-  const scopes = importmap.scopes;
+const getImportMapScopes = function(importMap: ImportMap, docRoot: URL): Scope[] {
+  const scopes = importMap.scopes;
   if(scopes === undefined) {
     return [];
   }
@@ -54,14 +54,14 @@ const getImportmapScopes = function(importmap: Importmap, docRoot: URL): Scope[]
           path,
           isFullUrl: true,
           pathSegments: url.pathname.split('/').filter((v) => v.length > 0),
-          map: importmapMapToUrl(scopes[path], docRoot),
+          map: importMapMapToUrl(scopes[path], docRoot),
         };
       } catch {
         return {
           path,
           isFullUrl: false,
           pathSegments: path.split('/').filter((v) => v.length > 0),
-          map: importmapMapToUrl(scopes[path], docRoot),
+          map: importMapMapToUrl(scopes[path], docRoot),
         };
       }
     })
@@ -85,14 +85,14 @@ const resolveWithImports = function(path: string, map: Record<string, URL>) {
   return null;
 }
 
-class ImportmapResolver {
+class ImportMapResolver {
   imports: Record<string, URL>;
   scopes: Scope[] | null;
   docRoot: URL;
 
-  constructor(importmap: Importmap, docRoot: URL) {
-    this.imports = importmapMapToUrl(importmap?.imports ?? {}, docRoot);
-    const scopes = getImportmapScopes(importmap ?? {}, docRoot);
+  constructor(importMap: ImportMap, docRoot: URL) {
+    this.imports = importMapMapToUrl(importMap?.imports ?? {}, docRoot);
+    const scopes = getImportMapScopes(importMap ?? {}, docRoot);
     if(scopes.length > 0) {
       this.scopes = scopes;
     } else {
@@ -138,5 +138,5 @@ class ImportmapResolver {
   }
 }
 
-export type { Importmap, Scope };
-export default ImportmapResolver;
+export type { ImportMap, Scope };
+export default ImportMapResolver;
