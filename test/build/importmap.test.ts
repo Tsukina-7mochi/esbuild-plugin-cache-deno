@@ -33,7 +33,7 @@ Deno.test(testName("Local without importmap"), async () => {
       platform: 'browser',
       plugins: [
         esbuildCachePlugin({
-          lockMap: { version: "2" },
+          lockMap: { version: "3" },
           denoCacheDirectory: cachePath,
           importmap: {},
           importmapBasePath: relative('importmap')
@@ -64,7 +64,7 @@ Deno.test(testName("Local with importmap"), async () => {
       platform: 'browser',
       plugins: [
         esbuildCachePlugin({
-          lockMap: { version: "2" },
+          lockMap: { version: "3" },
           denoCacheDirectory: cachePath,
           importmap: {
             imports: {

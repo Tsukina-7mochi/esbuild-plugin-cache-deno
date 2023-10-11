@@ -1,9 +1,24 @@
-interface LockMap {
-  version: string;
+interface LockMapV2 {
+  version: "2";
   remote?: { [key: string]: string };
   npm?: {
     specifiers: { [key: string]: string };
     packages: {
+      [key: string]: {
+        integrity: string;
+        dependencies: { [key: string]: string };
+      };
+    };
+  };
+}
+
+interface LockMapV3 {
+  version: "3";
+  remote?: { [key: string]: string };
+  redirects?: { [key: string]: string };
+  packages?: {
+    specifiers: { [key: string]: string };
+    npm?: {
       [key: string]: {
         integrity: string;
         dependencies: { [key: string]: string };
@@ -36,4 +51,4 @@ interface ModuleFilePath {
   toCacheURL: (cacheDirname: URL) => URL | null | Promise<URL | null>;
 }
 
-export type { LockMap, PartialPackageJSON, ModuleScope, ModuleFilePath };
+export type { LockMapV2, LockMapV3, PartialPackageJSON, ModuleScope, ModuleFilePath };

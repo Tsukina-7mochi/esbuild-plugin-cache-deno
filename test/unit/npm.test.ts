@@ -673,7 +673,7 @@ Deno.test(testName('resolveImport core module URL'), async () => {
     new URL('npm:/module@1.0.0/index.js'),
     cacheRoot,
     {
-      version: '2',
+      version: '3',
     }
   );
 
@@ -693,7 +693,7 @@ Deno.test(testName('resolveImport core module name'), async () => {
     new URL('npm:/module@1.0.0/index.js'),
     cacheRoot,
     {
-      version: '2',
+      version: '3',
     }
   );
 
@@ -713,7 +713,7 @@ Deno.test(testName('resolveImport relative'), async () => {
     new URL('npm:/module@1.0.0/foo/index.js'),
     cacheRoot,
     {
-      version: '2',
+      version: '3',
     }
   );
 
@@ -733,7 +733,7 @@ Deno.test(testName('resolveImport relative parent'), async () => {
     new URL('npm:/module@1.0.0/foo/index.js'),
     cacheRoot,
     {
-      version: '2',
+      version: '3',
     }
   );
 
@@ -753,7 +753,7 @@ Deno.test(testName('resolveImport relative directory'), async () => {
     new URL('npm:/module@1.0.0/foo.js'),
     cacheRoot,
     {
-      version: '2',
+      version: '3',
     }
   );
 
@@ -772,7 +772,7 @@ Deno.test(testName('resolveImport relative no entry'), async () => {
     new URL('npm:/module@1.0.0/foo.js'),
     cacheRoot,
     {
-      version: '2',
+      version: '3',
     }
   );
 
@@ -799,18 +799,18 @@ Deno.test(testName('resolveImport deps from file'), async () => {
     new URL('file:///path/to/root/main.js'),
     cacheRoot,
     {
-      version: '2',
-      npm: {
+      version: '3',
+      packages: {
         specifiers: {
-          "module": "module@1.0.0"
+          "npm:module@1.0.0": "npm:module@1.0.0"
         },
-        packages: {
+        npm: {
           "module@1.0.0": {
             "integrity": "SHA HASH HERE",
             "dependencies": {}
           },
         },
-      },
+      }
     }
   );
 
@@ -839,12 +839,12 @@ Deno.test(testName('resolveImport deps from module'), async () => {
     new URL('npm:/module1@1.0.0/main.js'),
     cacheRoot,
     {
-      version: '2',
-      npm: {
+      version: '3',
+      packages: {
         specifiers: {
-          "module1": "module1@1.0.0"
+          "npm:module1@1.0.0": "npm:module1@1.0.0"
         },
-        packages: {
+        npm: {
           "module1@1.0.0": {
             "integrity": "SHA HASH HERE",
             "dependencies": {
@@ -880,12 +880,12 @@ Deno.test(testName('resolveImport self exports'), async () => {
     new URL('npm:/some-module@1.0.0/foo.js'),
     cacheRoot,
     {
-      version: '2',
-      npm: {
+      version: '3',
+      packages: {
         specifiers: {
-          "some-module": "some-module@1.0.0"
+          "npm:some-module@1.0.0": "npm:some-module@1.0.0"
         },
-        packages: {
+        npm: {
           "some-module@1.0.0": {
             "integrity": "SHA HASH HERE",
             "dependencies": {
@@ -908,7 +908,7 @@ Deno.test(testName('resolveImport non-exist'), async () => {
     'npm:module',
     new URL('file:///path/to/root/main.js'),
     cacheRoot,
-    { version: '2' }
+    { version: '3' }
   );
 
   asserts.assertEquals(
