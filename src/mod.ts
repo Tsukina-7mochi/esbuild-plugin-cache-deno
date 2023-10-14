@@ -1,9 +1,7 @@
-import { crypto, esbuild, posix } from '../deps.ts';
+import { esbuild, posix } from '../deps.ts';
 import type { ImportMap } from './importMap.ts';
 import type { LockMapV3 } from './types.ts';
 import ImportMapResolver from './importMap.ts';
-import * as http from './http.ts';
-import * as npm from './npm.ts';
 import * as util from '../util.ts';
 import { onImportMapKeyResolve } from './buildCallback/importMapBuildCallback.ts';
 import {
