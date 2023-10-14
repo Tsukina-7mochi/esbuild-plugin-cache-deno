@@ -6,6 +6,7 @@
     "noImplicitThis": true,
     "noImplicitAny": true,
     "noUnusedParameters": true,
+    "noImplicitReturns": true,
     "lib": [
       "ESNext",
       "deno.window"

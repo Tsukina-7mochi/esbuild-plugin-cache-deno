@@ -5,6 +5,19 @@ import ImportMapResolver from './importMap.ts';
 import * as http from './http.ts';
 import * as npm from './npm.ts';
 import * as util from '../util.ts';
+import { onImportMapKeyResolve } from './buildCallback/importMapBuildCallback.ts';
+import {
+  remotePluginNamespace,
+  onRemoteResolve,
+  onRemoteNamespaceResolve,
+  onRemoteLoad,
+} from './buildCallback/remoteBuildCallback.ts';
+import {
+  npmPluginNamespace,
+  onNpmResolve,
+  onNpmNamespaceResolve,
+  onNpmLoad,
+} from './buildCallback/npmBuildCallback.ts';
 
 type LoaderRules = {
   test: RegExp;
@@ -31,18 +44,6 @@ interface NormalizedOptions {
   loaderRules?: LoaderRules;
 }
 
-interface RemoteCachePluginData {
-  loader: esbuild.Loader | undefined;
-  cachePath: string;
-  fileHash: string;
-}
-
-interface NpmCachePluginData {
-  loader?: esbuild.Loader | undefined;
-  cachePath: string;
-  // hash: string;
-}
-
 const defaultLoaderRules: LoaderRules = [
   { test: /\.(c|m)?js$/, loader: 'js' },
   { test: /\.jsx$/, loader: 'jsx' },
@@ -63,46 +64,30 @@ const normalizeOptions = function(options: Options): NormalizedOptions {
   };
 };
 
-const getRedirectedLocation = async function (url: string) {
-  const res = await fetch(url, { redirect: 'manual' });
-  // Close response body to prevent resource leakage
-  await res.body?.cancel();
-  if (res.status !== 302) {
-    return null;
-  }
-
-  return res.headers.get('location');
-};
-
-const remoteCacheNamespace = 'net.ts7m.esbuild-cache-plugin.general';
-const npmCacheNamespace = 'net.ts7m.esbuild-cache-plugin.npm';
-
-
 function esbuildCachePlugin(options: Options): esbuild.Plugin {
-  // TODO: rename normalizedOptions to options
-  const normalizedOptions = normalizeOptions(options);
+  options = normalizeOptions(options);
 
   const lockMap = {
-    version: normalizedOptions.lockMap.version,
-    remote: normalizedOptions.lockMap.remote ?? {},
-    redirects: normalizedOptions.lockMap.redirects ?? {},
+    version: options.lockMap.version,
+    remote: options.lockMap.remote ?? {},
+    redirects: options.lockMap.redirects ?? {},
     packages: {
-      specifiers: normalizedOptions.lockMap.packages?.specifiers ?? {},
-      npm: normalizedOptions.lockMap.packages?.npm ?? {},
+      specifiers: options.lockMap.packages?.specifiers ?? {},
+      npm: options.lockMap.packages?.npm ?? {},
     },
   };
-  const cacheRoot = posix.toFileUrl(normalizedOptions.denoCacheDirectory);
+  const cacheRoot = posix.toFileUrl(options.denoCacheDirectory);
   if (!cacheRoot.pathname.endsWith('/')) {
     cacheRoot.pathname += '/';
   }
-  const importMap = normalizedOptions.importMap ?? {};
-  const importMapBasePath_ = posix.resolve(normalizedOptions.importMapBasePath ?? '.');
+  const importMap = options.importMap ?? {};
+  const importMapBasePath_ = posix.resolve(options.importMapBasePath ?? '.');
   const importMapBasePath = importMapBasePath_.endsWith('/') ? importMapBasePath_ : `${importMapBasePath_}/`
   const importMapBaseUrl = posix.toFileUrl(importMapBasePath);
   const importMapResolver = new ImportMapResolver(importMap, importMapBaseUrl);
   const loaderRules = [
     // Rules that appear early take precedence
-    ...(normalizedOptions.loaderRules ?? []),
+    ...(options.loaderRules ?? []),
     ...defaultLoaderRules,
   ];
 
@@ -124,7 +109,7 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
   return {
     name: 'esbuild-cache-plugin',
     setup(build) {
-      // resolve based on import map
+      // redirect imports in import map
       const importKeys = new Set([
         ...Object.keys(importMap?.imports ?? {}),
         ...Object.values(importMap?.scopes ?? {})
@@ -134,195 +119,59 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
         const filter = importKey.endsWith('/')
           ? new RegExp(`^${importKey}`, 'i')
           : new RegExp(`^${importKey}$`, 'i');
-        build.onResolve({ filter }, (args) => {
-          if (
-            args.namespace === remoteCacheNamespace ||
-            args.namespace === npmCacheNamespace
-          ) {
-            // Within the namespace, each resolver is responsible for importMap resolution
-            return null;
-          }
 
-          const url = importMapResolver.resolve(
-            args.path,
-            new URL('.', posix.toFileUrl(args.importer)),
-          );
-          if (url === null) {
-            return null;
-          }
-
-          if (url.protocol === 'file:') {
-            return build.resolve(posix.fromFileUrl(url), {
-              kind: args.kind,
-              importer: args.importer,
-              resolveDir: importMapBasePath,
-            });
-          }
-
-          return build.resolve(url.href, {
-            kind: args.kind,
-            importer: args.importer,
-            resolveDir: importMapBasePath,
-          });
-        });
+        build.onResolve({ filter }, onImportMapKeyResolve(
+          build,
+          importMapResolver,
+          importMapBasePath,
+          remotePluginNamespace,
+          npmPluginNamespace
+        ));
       }
 
       // listen import starts with "http" and "https"
-      build.onResolve({ filter: /^https?:\/\// }, async (args) => {
-        let fileUrl = new URL(args.path);
-
-        if (!(fileUrl.href in lockMap.remote)) {
-          // check if the redirect destination is in list
-          const redirectLocation = await getRedirectedLocation(fileUrl.href);
-          if (typeof redirectLocation !== 'string') {
-            return null;
-          }
-          if (!(redirectLocation in lockMap.remote)) {
-            return {
-              warnings: [{ text: `${args.path} not found in lock map` }],
-            };
-          }
-
-          fileUrl = new URL(redirectLocation);
-        }
-
-        if (fileUrl === null) {
-          return null;
-        }
-        const cachePath = posix.fromFileUrl(
-          http.toCacheURL(fileUrl, cacheRoot),
-        );
-        const loader = getLoader(fileUrl.href) ?? undefined;
-        const fileHash = lockMap.remote[fileUrl.href];
-        return {
-          path: fileUrl.href,
-          namespace: remoteCacheNamespace,
-          pluginData: { loader, cachePath, fileHash },
-        };
-      });
+      build.onResolve({ filter: /^https?:\/\// }, onRemoteResolve(
+        lockMap,
+        cacheRoot,
+        getLoader
+      ));
 
       build.onResolve(
-        { filter: /.*/, namespace: remoteCacheNamespace },
-        (args) => {
-          const fileUrl = http.resolveImport(
-            args.path,
-            new URL(args.importer),
-            importMapResolver,
-          );
-          if (fileUrl === null) {
-            return null;
-          }
-
-          return build.resolve(fileUrl.href, {
-            kind: args.kind,
-            importer: args.importer,
-          });
-        },
+        { filter: /.*/, namespace: remotePluginNamespace },
+        onRemoteNamespaceResolve(
+          build,
+          importMapResolver,
+        )
       );
 
       // resolve npm imports
-      const resolveNpm = async (args: esbuild.OnResolveArgs) => {
-        const importerUrl = await Promise.resolve()
-          .then(() => new URL(args.importer))
-          .catch(() => posix.toFileUrl(args.importer))
-          .catch(() => null);
-        if (importerUrl === null) {
-          return null;
-        }
-
-        const url = await npm.resolveImport(
-          args.path,
-          importerUrl,
-          cacheRoot,
-          lockMap,
-          importMapResolver,
-        );
-        if (url === null) {
-          return null;
-        }
-
-        const loader = getLoader(url.href) ?? undefined;
-        if (url.protocol === 'node:' && loader !== 'empty') {
-          return {
-            errors: [{ text: 'Cannot import Node.js\'s core modules.' }],
-          };
-        }
-
-        const cachePath = loader === 'empty'
-          ? ''
-          : posix.fromFileUrl(npm.toCacheURL(url, cacheRoot));
-        // const hash = lockMap.npm.packages[pkgFullName].integrity;
-
-        return {
-          path: url.href,
-          namespace: npmCacheNamespace,
-          pluginData: { loader, cachePath },
-        };
-      };
-      build.onResolve({ filter: /^npm:/ }, resolveNpm);
+      build.onResolve({ filter: /^npm:/ }, onNpmResolve(
+        lockMap,
+        cacheRoot,
+        importMapResolver,
+        getLoader
+      ));
       build.onResolve(
-        { filter: /.*/, namespace: npmCacheNamespace },
-        resolveNpm,
+        { filter: /.*/, namespace: npmPluginNamespace },
+        onNpmNamespaceResolve(
+          lockMap,
+          cacheRoot,
+          importMapResolver,
+          getLoader
+        )
       );
 
       // verify the hash of the cached file
       // and return the content with the appropriate loader
       build.onLoad(
-        { filter: /.*/, namespace: remoteCacheNamespace },
-        async (args) => {
-          const pluginData = args.pluginData as RemoteCachePluginData;
-
-          try {
-            const contents = await Deno.readFile(pluginData.cachePath);
-            const hashArrayBuffer = await crypto.subtle.digest(
-              'SHA-256',
-              contents,
-            );
-            const hashView = new Uint8Array(hashArrayBuffer);
-            const hashHexString = Array.from(hashView)
-              .map((b) => b.toString(16).padStart(2, '0'))
-              .join('');
-
-            if (hashHexString !== pluginData.fileHash) {
-              return {
-                errors: [{ text: `Outdated cache detected for ${args.path}` }],
-              };
-            }
-
-            return { contents, loader: pluginData.loader };
-          } catch (err) {
-            return {
-              errors: [{
-                text: `Failed to load cache of ${args.path}`,
-                detail: (err instanceof Error ? err.message : err),
-              }],
-            };
-          }
-        },
+        { filter: /.*/, namespace: remotePluginNamespace },
+        onRemoteLoad()
       );
 
       // return the content with the appropriate loader
       build.onLoad(
-        { filter: /.*/, namespace: npmCacheNamespace },
-        async (args) => {
-          const pluginData = args.pluginData as NpmCachePluginData;
-
-          try {
-            const contents = pluginData.loader === 'empty'
-              ? ''
-              : await Deno.readFile(pluginData.cachePath);
-            // TODO: Verify the hash
-
-            return { contents, loader: pluginData.loader };
-          } catch (err) {
-            return {
-              errors: [{
-                text: `Failed to load cache of ${args.path}`,
-                detail: (err instanceof Error ? err.message : err),
-              }],
-            };
-          }
-        },
+        { filter: /.*/, namespace: npmPluginNamespace },
+        onNpmLoad()
       );
     },
   };
