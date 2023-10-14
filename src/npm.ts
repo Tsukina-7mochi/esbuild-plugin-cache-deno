@@ -49,7 +49,7 @@ const coreModuleNames = [
   'zlib',
 ];
 
-const testFileExistence = async function (url: URL, cacheRoot: URL) {
+const testFileExistence = async function (url: URL, cacheRoot: URL): Promise<URL | null> {
   if (await fs.exists(toCacheURL(url, cacheRoot), { isFile: true })) {
     return url;
   }
@@ -67,7 +67,7 @@ const decomposePackageNameVersion = function (
   }
 };
 
-const toCacheURL = function (url: URL, cacheRoot: URL) {
+const toCacheURL = function (url: URL, cacheRoot: URL): URL {
   const pathSegments = url.pathname.split('/');
   const pkgFullName = pathSegments[1];
   const [pkgName, pkgVersion] = decomposePackageNameVersion(pkgFullName);
@@ -81,7 +81,7 @@ const toCacheURL = function (url: URL, cacheRoot: URL) {
   return new URL(path, cacheRoot);
 };
 
-const normalizeNodeNpmUrl = function (url: URL) {
+const normalizeNodeNpmUrl = function (url: URL): URL {
   if (url.pathname === '' || url.pathname === '/') {
     throw Error('URL path must not be empty or root (/).');
   }
@@ -97,7 +97,7 @@ const normalizeNodeNpmUrl = function (url: URL) {
   return new URL(`${url.protocol}${pathname}`);
 };
 
-const findClosestPackageScope = async function (url: URL, cacheRoot: URL) {
+const findClosestPackageScope = async function (url: URL, cacheRoot: URL): Promise<URL | null> {
   const normalizedUrl = normalizeNodeNpmUrl(url);
   let packageJsonUrl = new URL('./package.json', normalizedUrl);
 
@@ -115,7 +115,7 @@ const getPackageExports = function (
   packageJSON: PartialPackageJSON,
   useMain = true,
   preferImport = false,
-) {
+): Record<string, string> {
   const exports: Record<string, string> = {};
   if (useMain && typeof packageJSON['main'] === 'string') {
     exports['.'] = packageJSON['main'];
@@ -186,7 +186,7 @@ const getPackageExports = function (
 const resolveExports = function (
   path: string,
   exports: Record<string, string>,
-) {
+): string | null {
   if (path === '.' || path === '') {
     return exports['.'];
   }
@@ -206,13 +206,15 @@ const resolveExports = function (
       }
     }
   }
+
+  return null;
 };
 
 // const getPackageImports = function(packageJSON: PackageJSON) {
 //   return {};
 // }
 
-const resolveAsFile = async function (url: URL, cacheRoot: URL) {
+const resolveAsFile = async function (url: URL, cacheRoot: URL): Promise<URL | null> {
   // .cjs or .mjs support?
   return await testFileExistence(url, cacheRoot) ??
     await testFileExistence(new URL(`${url.href}.js`), cacheRoot) ??
@@ -220,7 +222,7 @@ const resolveAsFile = async function (url: URL, cacheRoot: URL) {
     await testFileExistence(new URL(`${url.href}.node`), cacheRoot);
 };
 
-const resolveIndex = async function (url: URL, cacheRoot: URL) {
+const resolveIndex = async function (url: URL, cacheRoot: URL): Promise<URL | null> {
   // .cjs or .mjs support?
   return await testFileExistence(new URL('index.js', url), cacheRoot) ??
     await testFileExistence(new URL('index.json', url), cacheRoot) ??
@@ -230,7 +232,7 @@ const resolveIndex = async function (url: URL, cacheRoot: URL) {
 const resolveAsDirectory = async function (
   url: URL,
   cacheRoot: URL,
-) {
+): Promise<URL | null> {
   if (await testFileExistence(new URL('package.json', url), cacheRoot)) {
     const content = await Deno.readTextFile(
       toCacheURL(new URL('package.json', url), cacheRoot),
@@ -257,7 +259,7 @@ const resolveImport = async function (
   cacheRoot: URL,
   lockMap: LockMapV3,
   importMapResolver?: ImportMapResolver,
-) {
+): Promise<URL | null> {
   const importerDirname = new URL('.', importer);
 
   if (moduleName.startsWith('node:')) {

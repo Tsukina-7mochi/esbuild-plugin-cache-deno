@@ -108,6 +108,7 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
 
   return {
     name: 'esbuild-cache-plugin',
+    // deno-lint-ignore explicit-function-return-type
     setup(build) {
       // redirect imports in import map
       const importKeys = new Set([

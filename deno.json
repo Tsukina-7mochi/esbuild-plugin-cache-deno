@@ -21,6 +21,9 @@
     "rules": {
       "tags": [
         "recommended"
+      ],
+      "include": [
+        "explicit-function-return-type"
       ]
     }
   },

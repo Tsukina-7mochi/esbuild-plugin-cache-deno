@@ -1,11 +1,11 @@
-const urlHashAndSearchRemoved = function (url: URL) {
+const urlHashAndSearchRemoved = function (url: URL): URL {
   const url_ = new URL(url);
   url_.hash = '';
   url_.search = '';
   return url_;
 };
 
-const urlIsDescendant = function (base: URL, target: URL) {
+const urlIsDescendant = function (base: URL, target: URL): boolean {
   const base_ = urlHashAndSearchRemoved(base);
   const target_ = urlHashAndSearchRemoved(target);
   return target_.href.startsWith(base_.href);

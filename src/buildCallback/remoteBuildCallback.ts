@@ -18,7 +18,7 @@ const onRemoteResolve = (
   getLoader: (path: string) => esbuild.Loader | null,
 ) =>
 (args: esbuild.OnResolveArgs): esbuild.OnResolveResult | null => {
-  let fileUrl = new URL(args.path);
+  const fileUrl = new URL(args.path);
 
   if (lockMap.remote === undefined) {
     return null;

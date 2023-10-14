@@ -71,7 +71,7 @@ const getImportMapScopes = function (
     .toSorted((a, b) => b.pathSegments.length - a.pathSegments.length);
 };
 
-const resolveWithImports = function (path: string, map: Record<string, URL>) {
+const resolveWithImports = function (path: string, map: Record<string, URL>): URL | null {
   for (const key in map) {
     // keys can be used as prefix only when it ends with "/"
     if (key.endsWith('/')) {
@@ -105,7 +105,7 @@ class ImportMapResolver {
   }
 
   // importer -> URL
-  resolve(path: string, importerDirname: URL) {
+  resolve(path: string, importerDirname: URL): URL | null {
     if (
       path.startsWith('./') || path.startsWith('../') || path.startsWith('/')
     ) {

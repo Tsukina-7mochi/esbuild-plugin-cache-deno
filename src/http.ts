@@ -5,7 +5,7 @@ const resolveImport = function (
   moduleName: string,
   importer: URL,
   importMapResolver?: ImportMapResolver,
-) {
+): URL | null {
   let url = null;
   try {
     // simply return if module name is URL
@@ -32,7 +32,7 @@ const resolveImport = function (
   return url;
 };
 
-const toCacheURL = function (url: URL, cacheRoot: URL) {
+const toCacheURL = function (url: URL, cacheRoot: URL): URL {
   const protocol = url.protocol.slice(0, -1);
   const hostname = url.hostname;
   // calculate hash of pathname
