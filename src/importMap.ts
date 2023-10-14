@@ -117,7 +117,7 @@ class ImportMapResolver {
         if (scope.isFullUrl) {
           if (importerDirname.href.startsWith(scope.path)) {
             const resolved = resolveWithImports(path, scope.map);
-            if (typeof resolved !== null) {
+            if (resolved !== null) {
               return resolved;
             }
           }
@@ -129,7 +129,7 @@ class ImportMapResolver {
             importerDirname.href.endsWith(`/${scope.pathSegments.join('/')}`)
           ) {
             const resolved = resolveWithImports(path, scope.map);
-            if (typeof resolved !== null) {
+            if (resolved !== null) {
               return resolved;
             }
           }
