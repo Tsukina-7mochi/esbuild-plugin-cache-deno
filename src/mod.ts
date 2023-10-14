@@ -24,7 +24,7 @@ type LoaderRules = {
   loader: esbuild.Loader;
 }[];
 
-interface Options {
+type Options = {
   lockMap: LockMapV3;
   denoCacheDirectory: string;
   /** @deprecated */
@@ -36,7 +36,7 @@ interface Options {
   loaderRules?: LoaderRules;
 }
 
-interface NormalizedOptions {
+type NormalizedOptions = {
   lockMap: LockMapV3;
   denoCacheDirectory: string;
   importMap?: ImportMap;

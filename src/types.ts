@@ -1,4 +1,4 @@
-interface LockMapV2 {
+type LockMapV2 = {
   version: '2';
   remote?: { [key: string]: string };
   npm?: {
@@ -12,7 +12,7 @@ interface LockMapV2 {
   };
 }
 
-interface LockMapV3 {
+type LockMapV3 = {
   version: '3';
   remote?: { [key: string]: string };
   redirects?: { [key: string]: string };
@@ -27,7 +27,7 @@ interface LockMapV3 {
   };
 }
 
-interface PartialPackageJSON {
+type PartialPackageJSON = {
   name: string;
   main?: string;
   exports?: string | {
@@ -42,7 +42,7 @@ interface PartialPackageJSON {
 
 type ImportKind = 'import' | 'require';
 
-interface ModuleScope {
+type ModuleScope = {
   root: URL;
   resolve: (
     moduleName: string,
@@ -51,7 +51,7 @@ interface ModuleScope {
   ) => URL | null | Promise<URL | null>;
 }
 
-interface ModuleFilePath {
+type ModuleFilePath = {
   url: URL;
   scope: ModuleScope | null;
   toCacheURL: (cacheDirname: URL) => URL | null | Promise<URL | null>;

@@ -1,11 +1,11 @@
-interface ImportMap {
+type ImportMap = {
   imports?: Record<string, string>;
   scopes?: {
     [key: string]: Record<string, string>;
   };
 }
 
-interface Scope {
+type Scope = {
   path: string;
   isFullUrl: boolean;
   pathSegments: string[];
