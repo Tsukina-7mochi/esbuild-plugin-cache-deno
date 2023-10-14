@@ -12,37 +12,40 @@ interface Scope {
   map: Record<string, URL>;
 }
 
-const getImportMapValueUrl = function(value: string, docRoot: URL): URL {
+const getImportMapValueUrl = function (value: string, docRoot: URL): URL {
   try {
     return new URL(value);
   } catch {
-    if(value.startsWith('/')) {
+    if (value.startsWith('/')) {
       return new URL('file://' + value);
-    } else if(value.startsWith('./') || value.startsWith('../')) {
+    } else if (value.startsWith('./') || value.startsWith('../')) {
       return new URL(value, docRoot);
     }
     throw Error(`${value} is not valid for importMap value.`);
   }
-}
+};
 
-const importMapMapToUrl = function(
+const importMapMapToUrl = function (
   map: Record<string, string>,
-  docRoot: URL
+  docRoot: URL,
 ): Record<string, URL> {
   const urlMap: Record<string, URL> = {};
-  for(const key in map) {
+  for (const key in map) {
     let newKey = key;
-    if(key.startsWith('./') || key.startsWith('../') || key.startsWith('/')) {
+    if (key.startsWith('./') || key.startsWith('../') || key.startsWith('/')) {
       newKey = new URL(key, docRoot).href;
     }
     urlMap[newKey] = getImportMapValueUrl(map[key], docRoot);
   }
   return urlMap;
-}
+};
 
-const getImportMapScopes = function(importMap: ImportMap, docRoot: URL): Scope[] {
+const getImportMapScopes = function (
+  importMap: ImportMap,
+  docRoot: URL,
+): Scope[] {
   const scopes = importMap.scopes;
-  if(scopes === undefined) {
+  if (scopes === undefined) {
     return [];
   }
 
@@ -66,9 +69,9 @@ const getImportMapScopes = function(importMap: ImportMap, docRoot: URL): Scope[]
       }
     })
     .toSorted((a, b) => b.pathSegments.length - a.pathSegments.length);
-}
+};
 
-const resolveWithImports = function(path: string, map: Record<string, URL>) {
+const resolveWithImports = function (path: string, map: Record<string, URL>) {
   for (const key in map) {
     // keys can be used as prefix only when it ends with "/"
     if (key.endsWith('/')) {
@@ -83,7 +86,7 @@ const resolveWithImports = function(path: string, map: Record<string, URL>) {
   }
 
   return null;
-}
+};
 
 class ImportMapResolver {
   imports: Record<string, URL>;
@@ -93,7 +96,7 @@ class ImportMapResolver {
   constructor(importMap: ImportMap, docRoot: URL) {
     this.imports = importMapMapToUrl(importMap?.imports ?? {}, docRoot);
     const scopes = getImportMapScopes(importMap ?? {}, docRoot);
-    if(scopes.length > 0) {
+    if (scopes.length > 0) {
       this.scopes = scopes;
     } else {
       this.scopes = null;
@@ -103,12 +106,14 @@ class ImportMapResolver {
 
   // importer -> URL
   resolve(path: string, importerDirname: URL) {
-    if(path.startsWith('./') || path.startsWith('../') || path.startsWith('/')) {
+    if (
+      path.startsWith('./') || path.startsWith('../') || path.startsWith('/')
+    ) {
       path = new URL(path, this.docRoot).href;
     }
 
-    if(this.scopes !== null) {
-      for(const scope of this.scopes) {
+    if (this.scopes !== null) {
+      for (const scope of this.scopes) {
         if (scope.isFullUrl) {
           if (importerDirname.href.startsWith(scope.path)) {
             const resolved = resolveWithImports(path, scope.map);
@@ -118,7 +123,9 @@ class ImportMapResolver {
           }
         } else {
           if (
-            importerDirname.href.includes(`/${scope.pathSegments.join('/')}/`) ||
+            importerDirname.href.includes(
+              `/${scope.pathSegments.join('/')}/`,
+            ) ||
             importerDirname.href.endsWith(`/${scope.pathSegments.join('/')}`)
           ) {
             const resolved = resolveWithImports(path, scope.map);
@@ -130,7 +137,7 @@ class ImportMapResolver {
       }
     }
 
-    if(this.imports !== null) {
+    if (this.imports !== null) {
       return resolveWithImports(path, this.imports);
     }
 

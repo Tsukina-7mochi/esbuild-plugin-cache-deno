@@ -8,17 +8,19 @@ type RemotePluginData = {
   loader: esbuild.Loader | undefined;
   cachePath: string;
   fileHash: string;
-}
-const remotePluginData = (pluginData: RemotePluginData): RemotePluginData => pluginData;
+};
+const remotePluginData = (pluginData: RemotePluginData): RemotePluginData =>
+  pluginData;
 
 const onRemoteResolve = (
   lockMap: LockMapV3,
   cacheRoot: URL,
   getLoader: (path: string) => esbuild.Loader | null,
-) => (args: esbuild.OnResolveArgs): esbuild.OnResolveResult | null => {
+) =>
+(args: esbuild.OnResolveArgs): esbuild.OnResolveResult | null => {
   let fileUrl = new URL(args.path);
 
-  if(lockMap.remote === undefined) {
+  if (lockMap.remote === undefined) {
     return null;
   }
 
@@ -42,8 +44,9 @@ const onRemoteResolve = (
 
 const onRemoteNamespaceResolve = (
   build: esbuild.PluginBuild,
-  importMapResolver: ImportMapResolver
-) => (args: esbuild.OnResolveArgs): Promise<esbuild.OnResolveResult> | null => {
+  importMapResolver: ImportMapResolver,
+) =>
+(args: esbuild.OnResolveArgs): Promise<esbuild.OnResolveResult> | null => {
   const fileUrl = http.resolveImport(
     args.path,
     new URL(args.importer),
@@ -59,40 +62,41 @@ const onRemoteNamespaceResolve = (
   });
 };
 
-const onRemoteLoad = () => async (args: esbuild.OnLoadArgs): Promise<esbuild.OnLoadResult> => {
-  const pluginData = args.pluginData as RemotePluginData;
+const onRemoteLoad =
+  () => async (args: esbuild.OnLoadArgs): Promise<esbuild.OnLoadResult> => {
+    const pluginData = args.pluginData as RemotePluginData;
 
-  try {
-    const contents = await Deno.readFile(pluginData.cachePath);
-    const hashArrayBuffer = await crypto.subtle.digest(
-      'SHA-256',
-      contents,
-    );
-    const hashView = new Uint8Array(hashArrayBuffer);
-    const hashHexString = Array.from(hashView)
-      .map((b) => b.toString(16).padStart(2, '0'))
-      .join('');
+    try {
+      const contents = await Deno.readFile(pluginData.cachePath);
+      const hashArrayBuffer = await crypto.subtle.digest(
+        'SHA-256',
+        contents,
+      );
+      const hashView = new Uint8Array(hashArrayBuffer);
+      const hashHexString = Array.from(hashView)
+        .map((b) => b.toString(16).padStart(2, '0'))
+        .join('');
 
-    if (hashHexString !== pluginData.fileHash) {
+      if (hashHexString !== pluginData.fileHash) {
+        return {
+          errors: [{ text: `Outdated cache detected for ${args.path}` }],
+        };
+      }
+
+      return { contents, loader: pluginData.loader };
+    } catch (err) {
       return {
-        errors: [{ text: `Outdated cache detected for ${args.path}` }],
+        errors: [{
+          text: `Failed to load cache of ${args.path}`,
+          detail: (err instanceof Error ? err.message : err),
+        }],
       };
     }
-
-    return { contents, loader: pluginData.loader };
-  } catch (err) {
-    return {
-      errors: [{
-        text: `Failed to load cache of ${args.path}`,
-        detail: (err instanceof Error ? err.message : err),
-      }],
-    };
-  }
-};
+  };
 
 export {
-  remotePluginNamespace,
-  onRemoteResolve,
-  onRemoteNamespaceResolve,
   onRemoteLoad,
+  onRemoteNamespaceResolve,
+  onRemoteResolve,
+  remotePluginNamespace,
 };

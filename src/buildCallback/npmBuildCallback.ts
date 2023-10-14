@@ -10,7 +10,7 @@ type NpmPluginData = {
   loader?: esbuild.Loader | undefined;
   cachePath: string;
   // hash: string;
-}
+};
 const npmPluginData = (pluginData: NpmPluginData): NpmPluginData => pluginData;
 
 const onNpmResolve = (
@@ -18,7 +18,10 @@ const onNpmResolve = (
   cacheRoot: URL,
   importMapResolver: ImportMapResolver,
   getLoader: (path: string) => esbuild.Loader | null,
-) => async (args: esbuild.OnResolveArgs): Promise<esbuild.OnResolveResult | null> => {
+) =>
+async (
+  args: esbuild.OnResolveArgs,
+): Promise<esbuild.OnResolveResult | null> => {
   const importerUrl = await Promise.resolve()
     .then(() => new URL(args.importer))
     .catch(() => posix.toFileUrl(args.importer))
@@ -57,29 +60,30 @@ const onNpmResolve = (
   };
 };
 
-const onNpmLoad = () => async (args: esbuild.OnLoadArgs): Promise<OnLoadResult> => {
-  const pluginData = args.pluginData as NpmPluginData;
+const onNpmLoad =
+  () => async (args: esbuild.OnLoadArgs): Promise<OnLoadResult> => {
+    const pluginData = args.pluginData as NpmPluginData;
 
-  try {
-    const contents = pluginData.loader === 'empty'
-      ? ''
-      : await Deno.readFile(pluginData.cachePath);
-    // TODO: Verify the hash
+    try {
+      const contents = pluginData.loader === 'empty'
+        ? ''
+        : await Deno.readFile(pluginData.cachePath);
+      // TODO: Verify the hash
 
-    return { contents, loader: pluginData.loader };
-  } catch (err) {
-    return {
-      errors: [{
-        text: `Failed to load cache of ${args.path}`,
-        detail: (err instanceof Error ? err.message : err),
-      }],
-    };
-  }
-}
+      return { contents, loader: pluginData.loader };
+    } catch (err) {
+      return {
+        errors: [{
+          text: `Failed to load cache of ${args.path}`,
+          detail: (err instanceof Error ? err.message : err),
+        }],
+      };
+    }
+  };
 
 export {
   npmPluginNamespace,
+  onNpmLoad,
   onNpmResolve,
   onNpmResolve as onNpmNamespaceResolve,
-  onNpmLoad,
 };

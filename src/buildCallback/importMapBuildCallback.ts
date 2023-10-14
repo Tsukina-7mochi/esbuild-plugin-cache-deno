@@ -6,8 +6,9 @@ const onImportMapKeyResolve = (
   importMapResolver: ImportMapResolver,
   importMapBasePath: string,
   remoteCacheNamespace: string,
-  npmCacheNamespace: string
-) => (args: esbuild.OnResolveArgs): Promise<esbuild.OnResolveResult> | null => {
+  npmCacheNamespace: string,
+) =>
+(args: esbuild.OnResolveArgs): Promise<esbuild.OnResolveResult> | null => {
   if (
     args.namespace === remoteCacheNamespace ||
     args.namespace === npmCacheNamespace
@@ -37,6 +38,6 @@ const onImportMapKeyResolve = (
     importer: args.importer,
     resolveDir: importMapBasePath,
   });
-}
+};
 
 export { onImportMapKeyResolve };

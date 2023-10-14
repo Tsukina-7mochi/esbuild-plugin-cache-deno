@@ -7,16 +7,16 @@ import * as npm from './npm.ts';
 import * as util from '../util.ts';
 import { onImportMapKeyResolve } from './buildCallback/importMapBuildCallback.ts';
 import {
-  remotePluginNamespace,
-  onRemoteResolve,
-  onRemoteNamespaceResolve,
   onRemoteLoad,
+  onRemoteNamespaceResolve,
+  onRemoteResolve,
+  remotePluginNamespace,
 } from './buildCallback/remoteBuildCallback.ts';
 import {
   npmPluginNamespace,
-  onNpmResolve,
-  onNpmNamespaceResolve,
   onNpmLoad,
+  onNpmNamespaceResolve,
+  onNpmResolve,
 } from './buildCallback/npmBuildCallback.ts';
 
 type LoaderRules = {
@@ -37,7 +37,7 @@ interface Options {
 }
 
 interface NormalizedOptions {
-  lockMap: LockMapV3,
+  lockMap: LockMapV3;
   denoCacheDirectory: string;
   importMap?: ImportMap;
   importMapBasePath?: string;
@@ -54,7 +54,7 @@ const defaultLoaderRules: LoaderRules = [
   { test: /\.txt$/, loader: 'text' },
 ];
 
-const normalizeOptions = function(options: Options): NormalizedOptions {
+const normalizeOptions = function (options: Options): NormalizedOptions {
   return {
     lockMap: options.lockMap,
     denoCacheDirectory: options.denoCacheDirectory,
@@ -82,7 +82,9 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
   }
   const importMap = options.importMap ?? {};
   const importMapBasePath_ = posix.resolve(options.importMapBasePath ?? '.');
-  const importMapBasePath = importMapBasePath_.endsWith('/') ? importMapBasePath_ : `${importMapBasePath_}/`
+  const importMapBasePath = importMapBasePath_.endsWith('/')
+    ? importMapBasePath_
+    : `${importMapBasePath_}/`;
   const importMapBaseUrl = posix.toFileUrl(importMapBasePath);
   const importMapResolver = new ImportMapResolver(importMap, importMapBaseUrl);
   const loaderRules = [
@@ -120,64 +122,73 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
           ? new RegExp(`^${importKey}`, 'i')
           : new RegExp(`^${importKey}$`, 'i');
 
-        build.onResolve({ filter }, onImportMapKeyResolve(
-          build,
-          importMapResolver,
-          importMapBasePath,
-          remotePluginNamespace,
-          npmPluginNamespace
-        ));
+        build.onResolve(
+          { filter },
+          onImportMapKeyResolve(
+            build,
+            importMapResolver,
+            importMapBasePath,
+            remotePluginNamespace,
+            npmPluginNamespace,
+          ),
+        );
       }
 
       // listen import starts with "http" and "https"
-      build.onResolve({ filter: /^https?:\/\// }, onRemoteResolve(
-        lockMap,
-        cacheRoot,
-        getLoader
-      ));
+      build.onResolve(
+        { filter: /^https?:\/\// },
+        onRemoteResolve(
+          lockMap,
+          cacheRoot,
+          getLoader,
+        ),
+      );
 
       build.onResolve(
         { filter: /.*/, namespace: remotePluginNamespace },
         onRemoteNamespaceResolve(
           build,
           importMapResolver,
-        )
+        ),
       );
 
       // resolve npm imports
-      build.onResolve({ filter: /^npm:/ }, onNpmResolve(
-        lockMap,
-        cacheRoot,
-        importMapResolver,
-        getLoader
-      ));
+      build.onResolve(
+        { filter: /^npm:/ },
+        onNpmResolve(
+          lockMap,
+          cacheRoot,
+          importMapResolver,
+          getLoader,
+        ),
+      );
       build.onResolve(
         { filter: /.*/, namespace: npmPluginNamespace },
         onNpmNamespaceResolve(
           lockMap,
           cacheRoot,
           importMapResolver,
-          getLoader
-        )
+          getLoader,
+        ),
       );
 
       // verify the hash of the cached file
       // and return the content with the appropriate loader
       build.onLoad(
         { filter: /.*/, namespace: remotePluginNamespace },
-        onRemoteLoad()
+        onRemoteLoad(),
       );
 
       // return the content with the appropriate loader
       build.onLoad(
         { filter: /.*/, namespace: npmPluginNamespace },
-        onNpmLoad()
+        onNpmLoad(),
       );
     },
   };
 }
 
 esbuildCachePlugin.util = util;
-export { esbuildCachePlugin };
 
+export { esbuildCachePlugin };
 export default esbuildCachePlugin;
