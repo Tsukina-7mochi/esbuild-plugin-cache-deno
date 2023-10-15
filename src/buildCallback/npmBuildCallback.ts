@@ -1,6 +1,6 @@
 import { esbuild, posix } from '../../deps.ts';
 import * as npm from '../npm.ts';
-import ImportMapResolver from '../importMap.ts';
+import ImportMapResolver from '../importMapResolver.ts';
 import { LockMapV3 } from '../types.ts';
 import { OnLoadResult } from 'https://deno.land/x/esbuild@v0.19.4/mod.js';
 

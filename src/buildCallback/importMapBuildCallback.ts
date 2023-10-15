@@ -1,5 +1,5 @@
 import { esbuild, posix } from '../../deps.ts';
-import ImportMapResolver from '../importMap.ts';
+import ImportMapResolver from '../importMapResolver.ts';
 
 const onImportMapKeyResolve = (
   build: esbuild.PluginBuild,

@@ -1,6 +1,6 @@
 import { esbuild, posix } from '../../deps.ts';
 import * as http from '../http.ts';
-import ImportMapResolver from '../importMap.ts';
+import ImportMapResolver from '../importMapResolver.ts';
 import { LockMapV3 } from '../types.ts';
 
 const remotePluginNamespace = 'net.ts7m.esbuild-cache-plugin.general';

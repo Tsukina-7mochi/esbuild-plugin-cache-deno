@@ -1,6 +1,6 @@
 import { fs } from '../deps.ts';
 import type { LockMapV3, PartialPackageJSON } from './types.ts';
-import ImportMapResolver from './importMap.ts';
+import ImportMapResolver from './importMapResolver.ts';
 
 const coreModuleNames = [
   'assert',

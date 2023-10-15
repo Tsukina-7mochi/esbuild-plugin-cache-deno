@@ -1,5 +1,5 @@
 import { crypto } from '../deps.ts';
-import ImportMapResolver from './importMap.ts';
+import ImportMapResolver from './importMapResolver.ts';
 
 const resolveImport = function (
   moduleName: string,

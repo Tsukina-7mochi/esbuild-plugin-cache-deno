@@ -1,5 +1,5 @@
 import { asserts } from '../../deps.ts';
-import ImportMapResolver from '../../src/importMap.ts';
+import ImportMapResolver from '../../src/importMapResolver.ts';
 
 const testName = (name: string) => `[importMap] ${name}`;
 

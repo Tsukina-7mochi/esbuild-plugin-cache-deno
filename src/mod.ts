@@ -1,7 +1,7 @@
 import { esbuild, posix } from '../deps.ts';
-import type { ImportMap } from './importMap.ts';
+import type { ImportMap } from './importMapResolver.ts';
 import type { LockMapV3 } from './types.ts';
-import ImportMapResolver from './importMap.ts';
+import ImportMapResolver from './importMapResolver.ts';
 import * as util from '../util.ts';
 import { onImportMapKeyResolve } from './buildCallback/importMapBuildCallback.ts';
 import {
