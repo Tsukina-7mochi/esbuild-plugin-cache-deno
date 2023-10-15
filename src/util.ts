@@ -1,14 +1,19 @@
-const urlHashAndSearchRemoved = function (url: URL): URL {
-  const url_ = new URL(url);
-  url_.hash = '';
-  url_.search = '';
-  return url_;
+/**
+ * Returns true if `target` `URL` is the descendant of `base` `URL` on pathname
+ *
+ * @param {URL} base
+ * @param {URL} target
+ * @param {boolean} [checkOrigin=false] Requires both `base` and `target` has the same origin
+ * @return {*}  {boolean}
+ */
+const urlIsDescendant = function (base: URL, target: URL, checkOrigin = false): boolean {
+  if(checkOrigin) {
+    if(base.origin !== target.origin) {
+      return false;
+    }
+  }
+
+  return target.pathname.startsWith(base.pathname);
 };
 
-const urlIsDescendant = function (base: URL, target: URL): boolean {
-  const base_ = urlHashAndSearchRemoved(base);
-  const target_ = urlHashAndSearchRemoved(target);
-  return target_.href.startsWith(base_.href);
-};
-
-export { urlHashAndSearchRemoved, urlIsDescendant };
+export { urlIsDescendant };
