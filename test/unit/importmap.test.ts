@@ -145,7 +145,7 @@ Deno.test(testName('Scope priority'), () => {
     },
     new URL('file:///path/to/root/')
   );
-  const actual = resolver.resolve('module', new URL('file:///path/to/root/foo/src/sub/sub2'));
+  const actual = resolver.resolve('module', new URL('file:///path/to/root/foo/src/sub/sub2/'));
 
   asserts.assertEquals(actual, new URL('https://example2.com/path/to/module/file3.js'));
 });
