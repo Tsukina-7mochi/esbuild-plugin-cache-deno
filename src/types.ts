@@ -27,7 +27,7 @@ type LockMapV3 = {
   };
 }
 
-type PartialPackageJSON = {
+type PackageJSON = {
   name: string;
   main?: string;
   exports?: string | {
@@ -38,10 +38,10 @@ type PartialPackageJSON = {
   imports?: string | {
     [key: string]: string | { [key: string]: string };
   };
-}
+};
 
 export type {
   LockMapV2,
   LockMapV3,
-  PartialPackageJSON,
+  PackageJSON,
 };

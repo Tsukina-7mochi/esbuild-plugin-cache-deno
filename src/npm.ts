@@ -1,5 +1,5 @@
 import { fs } from '../deps.ts';
-import type { LockMapV3, PartialPackageJSON } from './types.ts';
+import type { LockMapV3, PackageJSON } from './types.ts';
 import ImportMapResolver from './importMapResolver.ts';
 
 const coreModuleNames = [
@@ -112,7 +112,7 @@ const findClosestPackageScope = async function (url: URL, cacheRoot: URL): Promi
 };
 
 const getPackageExports = function (
-  packageJSON: PartialPackageJSON,
+  packageJSON: PackageJSON,
   useMain = true,
   preferImport = false,
 ): Record<string, string> {
@@ -237,7 +237,7 @@ const resolveAsDirectory = async function (
     const content = await Deno.readTextFile(
       toCacheURL(new URL('package.json', url), cacheRoot),
     );
-    const packageJSON = JSON.parse(content) as PartialPackageJSON;
+    const packageJSON = JSON.parse(content) as PackageJSON;
     const exports = getPackageExports(packageJSON);
     const main = exports['.'];
     const mainURL = new URL(main, url);
@@ -323,7 +323,7 @@ const resolveImport = async function (
       const packageJSONText = await Deno.readTextFile(
         toCacheURL(new URL('package.json', scope), cacheRoot),
       );
-      const packageJSON = JSON.parse(packageJSONText) as PartialPackageJSON;
+      const packageJSON = JSON.parse(packageJSONText) as PackageJSON;
       if (packageJSON['name'] === pkgName) {
         const exports = getPackageExports(packageJSON, false);
         if (path.length === 0) {
@@ -361,7 +361,7 @@ const resolveImport = async function (
   const packageJSONText = await Deno.readTextFile(
     toCacheURL(new URL(`npm:/${pkgToImportFullName}/package.json`), cacheRoot),
   );
-  const packageJSON = JSON.parse(packageJSONText) as PartialPackageJSON;
+  const packageJSON = JSON.parse(packageJSONText) as PackageJSON;
   const exports = getPackageExports(
     packageJSON,
     true,
