@@ -40,27 +40,8 @@ type PartialPackageJSON = {
   };
 }
 
-type ImportKind = 'import' | 'require';
-
-type ModuleScope = {
-  root: URL;
-  resolve: (
-    moduleName: string,
-    baseURL: URL,
-    kind: ImportKind,
-  ) => URL | null | Promise<URL | null>;
-}
-
-type ModuleFilePath = {
-  url: URL;
-  scope: ModuleScope | null;
-  toCacheURL: (cacheDirname: URL) => URL | null | Promise<URL | null>;
-}
-
 export type {
   LockMapV2,
   LockMapV3,
-  ModuleFilePath,
-  ModuleScope,
   PartialPackageJSON,
 };
