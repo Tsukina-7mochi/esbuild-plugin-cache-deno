@@ -1,0 +1,8 @@
+{
+  "compilerOptions": {
+    "lib": [
+      "DOM"
+    ]
+  },
+  "importMap": "import_map.json"
+}
