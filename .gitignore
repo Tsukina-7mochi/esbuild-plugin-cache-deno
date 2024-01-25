@@ -1,3 +1,6 @@
+# test coverage
+coverage
+
 *.orig
 *.pyc
 *.swp

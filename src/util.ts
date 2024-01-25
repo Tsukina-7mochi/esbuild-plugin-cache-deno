@@ -1,19 +1,37 @@
 /**
- * Returns true if `target` `URL` is the descendant of `base` `URL` on pathname
+ * Creates URL or returns null
  *
- * @param {URL} base
- * @param {URL} target
- * @param {boolean} [checkOrigin=false] Requires both `base` and `target` has the same origin
+ * @param {(string | URL)} url
+ * @param {(string | URL)} [base]
+ * @return {*}  {(URL | null)}
+ */
+const createURL = function(url: string | URL, base?: string | URL): URL | null {
+  try {
+    return new URL(url, base);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Returns true if `url` is special; a url with specific scheme
+ * @see: https://url.spec.whatwg.org/#url-miscellaneous
+ *
+ * @param {URL} url
  * @return {*}  {boolean}
  */
-const urlIsDescendant = function (base: URL, target: URL, checkOrigin = false): boolean {
-  if(checkOrigin) {
-    if(base.origin !== target.origin) {
+const isSpecialURL = function (url: URL): boolean {
+  switch (url.protocol) {
+    case 'ftp:':
+    case 'file:':
+    case 'http:':
+    case 'https:':
+    case 'ws:':
+    case 'wss:':
+      return true;
+    default:
       return false;
-    }
   }
-
-  return target.pathname.startsWith(base.pathname);
 };
 
-export { urlIsDescendant };
+export { createURL, isSpecialURL };

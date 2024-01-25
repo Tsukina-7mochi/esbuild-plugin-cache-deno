@@ -1,5 +1,10 @@
-import { esbuild, posix } from '../../deps.ts';
+import { esbuild, path } from '../../deps.ts';
 import ImportMapResolver from '../importMapResolver.ts';
+import { createURL } from '../util.ts';
+
+const toURL = function (specifier: string): URL {
+  return createURL(specifier) ?? path.toFileUrl(path.resolve(specifier));
+};
 
 const onImportMapKeyResolve = (
   build: esbuild.PluginBuild,
@@ -17,27 +22,32 @@ const onImportMapKeyResolve = (
     return null;
   }
 
-  const url = importMapResolver.resolve(
-    args.path,
-    new URL('.', posix.toFileUrl(args.importer)),
-  );
+  const specifier = createURL(args.path)?.href ?? args.path;
+  const importer = toURL(args.importer !== '' ? args.importer : Deno.cwd());
+  const url = importMapResolver.resolve(specifier, importer, true);
   if (url === null) {
     return null;
   }
 
-  if (url.protocol === 'file:') {
-    return build.resolve(posix.fromFileUrl(url), {
+  const resolved = url.protocol === 'file:'
+    ? build.resolve(path.fromFileUrl(url), {
+      kind: args.kind,
+      importer: args.importer,
+      resolveDir: importMapBasePath,
+    })
+    : build.resolve(url.href, {
       kind: args.kind,
       importer: args.importer,
       resolveDir: importMapBasePath,
     });
-  }
 
-  return build.resolve(url.href, {
-    kind: args.kind,
-    importer: args.importer,
-    resolveDir: importMapBasePath,
-  });
+  return resolved.then((res) => ({
+    ...res,
+    warnings: [
+      ...res.warnings,
+      ...importMapResolver.warnings
+    ]
+  }));
 };
 
 export { onImportMapKeyResolve };

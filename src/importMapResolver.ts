@@ -1,152 +1,175 @@
+import { isSpecialURL } from './util.ts';
+import WarningsHandler from './warningsHandler.ts';
+import { createURL } from './util.ts';
+
 type ImportMap = {
   imports?: Record<string, string>;
   scopes?: {
     [key: string]: Record<string, string>;
   };
-}
-
-type ImportMapScope = {
-  path: string;
-  isFullUrl: boolean;
-  pathName: string;
-  map: Record<string, URL>;
-}
-
-/**
- * Converts an import map entry value into `URL`
- *
- * @param {string} value import map entry value
- * @param {URL} docRoot document root path; Generally, the URL of the location where the import map is located
- * @return {*}  {URL}
- *
- * @example
- * getImportMapValueURL('./foo/bar.ts', new URL('http://example.com/'));
- * // -> new URL(http://example.com/foo/bar.ts)
- *
- * @example
- * getImportMapValueURL('/foo/bar.ts', docRoot);
- * // -> new URL(file:///foo/bar.ts)
- *
- * @example
- * getImportMapValueURL('./foo/bar.ts', new URL('file:///project/src/'));
- * // -> new URL(file:///project/src/foo/bar.ts)
- *
- * @example
- * getImportMapValueURL('../foo/bar.ts', new URL('file:///project/src/'));
- * // -> new URL(file:///project/foo/bar.ts)
- */
-const getImportMapValueUrl = function (value: string, docRoot: URL): URL {
-  try {
-    return new URL(value);
-  } catch {
-    if (value.startsWith('/')) {
-      return new URL('file://' + value);
-    } else if (value.startsWith('./') || value.startsWith('../')) {
-      return new URL(value, docRoot);
-    }
-    throw Error(`${value} is not valid for importMap value.`);
-  }
 };
 
-/**
- * Converts name-path map to name-url map in import map
- *
- * @param {Record<string, string>} map import map entry e.g. `importMap.imports` & `importMap.scope['scopeName']`
- * @param {URL} docRoot document root path; Generally, the URL of the location where the import map is located
- * @return {*}  {Record<string, URL>}
- *
- * @example
- * importMapMapToUrl({
- *   'module1': 'http://example.com/module1.ts',
- *   'module2': '/foo/module2.ts',
- *   'module3': './bar/module3.ts',
- *   'module4': '../module4.ts',
- * }, new URL('file:///project/src/'));
- * // -> {
- * //   'module1': new URL('http://example.com/module1.ts'),
- * //   'module2': new URL('file:///foo/module2.ts'),
- * //   'module3': new URL('file:///project/src/bar/module3.ts'),
- * //   'module3': new URL('file:///project/module4.ts'),
- * // }
- */
-const importMapMapToUrl = function (
-  map: Record<string, string>,
-  docRoot: URL,
-): Record<string, URL> {
-  const urlMap: Record<string, URL> = {};
-  for (const key in map) {
-    let newKey = key;
-    if (key.startsWith('./') || key.startsWith('../') || key.startsWith('/')) {
-      newKey = new URL(key, docRoot).href;
-    }
-    urlMap[newKey] = getImportMapValueUrl(map[key], docRoot);
-  }
-  return urlMap;
+type ModuleSpecifierMapItem = {
+  key: string;
+  value: URL | null;
+  verbosity: number;
 };
 
-/**
- * Creates `ImportMapScope`s from `ImportMap`
- *
- * @param {ImportMap} importMap
- * @param {URL} docRoot document root path; Generally, the URL of the location where the import map is located
- * @return {importMapScopes}  {ImportMapScope[]} scopes sorted by priority
- */
-const getImportMapScopes = function (
-  importMap: ImportMap,
-  docRoot: URL,
-): ImportMapScope[] {
-  const scopes = importMap.scopes;
-  if (scopes === undefined) {
-    return [];
-  }
-
-  return Object.keys(scopes)
-    .map((path) => {
-      try {
-        const url = new URL(path);
-        const pathSegments = url.pathname.split('/').filter((v) => v.length > 0);
-        return {
-          path,
-          isFullUrl: true,
-          pathName: `/${pathSegments.join('/')}`,
-          map: importMapMapToUrl(scopes[path], docRoot),
-          priority: pathSegments.length,
-        };
-      } catch {
-        const pathSegments = path.split('/').filter((v) => v.length > 0);
-        return {
-          path,
-          isFullUrl: false,
-          pathName: `/${pathSegments.join('/')}`,
-          map: importMapMapToUrl(scopes[path], docRoot),
-          priority: pathSegments.length,
-        };
-      }
-    })
-    .toSorted((a, b) => b.priority - a.priority);
+type ImportMapScopeItem = {
+  prefix: string;
+  imports: ModuleSpecifierMapItem[];
+  verbosity: number;
 };
 
-/**
- * Resolve `moduleSpecifier` with module specifier key-`URL` map
- *
- * @param {string} moduleSpecifier
- * @param {Record<string, URL>} map key-`URL` map
- * @return {*}  {(URL | null)}
- */
-const resolveWithImports = function (
-  moduleSpecifier: string,
-  map: Record<string, URL>
+const resolveURLLikeModuleSpecifier = function (
+  specifier: string,
+  baseURL?: URL,
 ): URL | null {
-  for (const key in map) {
-    // keys can be used as prefix only when it ends with "/"
-    if (key.endsWith('/')) {
-      if (moduleSpecifier.startsWith(key)) {
-        return new URL(moduleSpecifier.slice(key.length), map[key]);
-      }
+  if (
+    specifier.startsWith('/') || specifier.startsWith('./') ||
+    specifier.startsWith('../')
+  ) {
+    return createURL(specifier, baseURL);
+  }
+
+  return createURL(specifier);
+};
+
+const normalizeSpecifierKey = function (
+  specifierKey: string,
+  baseURL: URL,
+  warnings: WarningsHandler,
+): string | null {
+  if (specifierKey === '') {
+    warnings.push({ text: 'Import map specifier key is empty' });
+    return null;
+  }
+  return resolveURLLikeModuleSpecifier(specifierKey, baseURL)?.href ??
+    specifierKey;
+};
+
+const getVerbosity = function (specifier: string): number {
+  const split = specifier.split('/');
+  return split[split.length - 1] === '' ? split.length - 1 : split.length;
+};
+
+const sortAndNormalizeModuleSpecifierMap = function (
+  map: Record<string, string>,
+  baseURL: URL,
+  warnings: WarningsHandler,
+): ModuleSpecifierMapItem[] {
+  const result: ModuleSpecifierMapItem[] = [];
+
+  for (const [key, value] of Object.entries(map)) {
+    const normalizedKey = normalizeSpecifierKey(key, baseURL, warnings);
+    if (normalizedKey === null) {
+      warnings.push({
+        text: `Import map module specifier key ${key} is ignored.`,
+      });
+      continue;
+    }
+    const verbosity = getVerbosity(normalizedKey);
+
+    const addressURL = resolveURLLikeModuleSpecifier(value, baseURL);
+    if (addressURL === null) {
+      warnings.push({
+        text:
+          `Import map module specifier value ${value} for ${key} is invalid.`,
+      });
+      result.push({ key: normalizedKey, value: null, verbosity });
+      continue;
     }
 
-    if (moduleSpecifier === key) {
-      return map[key];
+    if (key.endsWith('/') && !addressURL.href.endsWith('/')) {
+      warnings.push({
+        text:
+          `Import map key ${key} ends with "/" but the relevant URL ${addressURL.href} does not ends with "/".`,
+      });
+      result.push({ key: normalizedKey, value: null, verbosity });
+      continue;
+    }
+
+    result.push({
+      key: normalizedKey,
+      value: addressURL,
+      verbosity,
+    });
+  }
+
+  result.sort((a, b) => b.verbosity - a.verbosity);
+
+  return result;
+};
+
+const sortAndNormalizeScopes = function (
+  scopes: { [key: string]: Record<string, string> },
+  baseURL: URL,
+  warnings: WarningsHandler,
+): ImportMapScopeItem[] {
+  const result: ImportMapScopeItem[] = [];
+
+  for (const [scopePrefix, imports] of Object.entries(scopes)) {
+    try {
+      const scopePrefixURL = new URL(scopePrefix, baseURL);
+      result.push({
+        prefix: scopePrefixURL.href,
+        imports: sortAndNormalizeModuleSpecifierMap(imports, baseURL, warnings),
+        verbosity: getVerbosity(scopePrefixURL.href),
+      });
+    } catch {
+      warnings.push({
+        text: `Import map scope prefix ${scopePrefix} is ignored.`,
+      });
+      continue;
+    }
+  }
+
+  result.sort((a, b) => b.verbosity - a.verbosity);
+
+  return result;
+};
+
+const resolveImportsMatch = function (
+  normalizedSpecifier: string,
+  specifierURL: URL | null,
+  specifierMap: ModuleSpecifierMapItem[],
+): URL | null {
+  for (const mapItem of specifierMap) {
+    const specifierKey = mapItem.key;
+    const resolutionResult = mapItem.value;
+
+    if (specifierKey === normalizedSpecifier) {
+      if (resolutionResult === null) {
+        throw TypeError(
+          `Cannot resolve ${specifierKey}, the resolution result is null for some reason.`,
+        );
+      }
+      return resolutionResult;
+    }
+    if (
+      specifierKey.endsWith('/') &&
+      normalizedSpecifier.startsWith(specifierKey) &&
+      (specifierURL === null || isSpecialURL(specifierURL))
+    ) {
+      if (resolutionResult === null) {
+        throw TypeError(
+          `Cannot resolve ${specifierKey}, the resolution result is null for some reason.`,
+        );
+      }
+      const afterPrefix = normalizedSpecifier.slice(specifierKey.length);
+      const url = createURL(afterPrefix, resolutionResult);
+      if (url === null) {
+        throw TypeError(
+          `Cannot resolve ${normalizedSpecifier} on ${resolutionResult} for ${specifierKey}`,
+        );
+      }
+      if (!url.href.startsWith(resolutionResult.href)) {
+        throw TypeError(
+          `Cannot resolve ${normalizedSpecifier} on ${resolutionResult} for ${specifierKey}; backtracking is not allowed.`,
+        );
+      }
+
+      return url;
     }
   }
 
@@ -159,14 +182,24 @@ const resolveWithImports = function (
  * @class ImportMapResolver
  */
 class ImportMapResolver {
-  imports: Record<string, URL>;
-  scopes: ImportMapScope[];
-  docRoot: URL;
+  imports: ModuleSpecifierMapItem[];
+  scopes: ImportMapScopeItem[];
+  baseURL: URL;
+  warnings: WarningsHandler;
 
-  constructor(importMap: ImportMap, docRoot: URL) {
-    this.imports = importMapMapToUrl(importMap?.imports ?? {}, docRoot);
-    this.scopes = getImportMapScopes(importMap, docRoot);
-    this.docRoot = docRoot;
+  constructor(importMap: ImportMap, baseURL: URL) {
+    this.warnings = new WarningsHandler();
+    this.imports = sortAndNormalizeModuleSpecifierMap(
+      importMap.imports ?? {},
+      baseURL,
+      this.warnings,
+    );
+    this.scopes = sortAndNormalizeScopes(
+      importMap.scopes ?? {},
+      baseURL,
+      this.warnings,
+    );
+    this.baseURL = baseURL;
   }
 
   /**
@@ -177,43 +210,45 @@ class ImportMapResolver {
    * @return {*}  {(URL | null)}
    * @memberof ImportMapResolver
    */
-  resolve(moduleSpecifier: string, importer: URL): URL | null {
-    const importerDirname = new URL('.', importer);
+  resolve(
+    moduleSpecifier: string,
+    importer: URL,
+    noSpecifierItself = false,
+  ): URL | null {
+    const baseURLString = importer?.href ?? this.baseURL.href;
+    const specifierURL = resolveURLLikeModuleSpecifier(
+      moduleSpecifier,
+      this.baseURL,
+    );
+    const normalizedSpecifier = specifierURL?.href ?? moduleSpecifier;
 
-    if (
-      moduleSpecifier.startsWith('/') ||
-      moduleSpecifier.startsWith('./') ||
-      moduleSpecifier.startsWith('../')
-    ) {
-      moduleSpecifier = new URL(moduleSpecifier, this.docRoot).href;
-    }
-
-    // resolve with `importMap.scope` entries
     for (const scope of this.scopes) {
-      if (scope.isFullUrl) {
-        if (importerDirname.href.startsWith(scope.path)) {
-          const resolved = resolveWithImports(moduleSpecifier, scope.map);
-          if (resolved !== null) {
-            return resolved;
-          }
-        }
-      } else {
-        if (
-          importerDirname.href.includes(scope.pathName + '/') ||
-          importerDirname.href.endsWith(scope.pathName)
-        ) {
-          const resolved = resolveWithImports(moduleSpecifier, scope.map);
-          if (resolved !== null) {
-            return resolved;
-          }
+      const isPrefix = scope.prefix.endsWith('/') &&
+        baseURLString.startsWith(scope.prefix);
+      if (scope.prefix === baseURLString || isPrefix) {
+        const scopeImportsMatch = resolveImportsMatch(
+          normalizedSpecifier,
+          specifierURL,
+          scope.imports,
+        );
+        if (scopeImportsMatch !== null) {
+          return scopeImportsMatch;
         }
       }
     }
 
-    // resolve with `importMap.imports`
-    return resolveWithImports(moduleSpecifier, this.imports);
+    const importsMatch = resolveImportsMatch(
+      normalizedSpecifier,
+      specifierURL,
+      this.imports,
+    );
+    if (importsMatch !== null) {
+      return importsMatch;
+    }
+
+    return noSpecifierItself ? null : specifierURL;
   }
 }
 
-export type { ImportMap, ImportMapScope };
+export type { ImportMap };
 export default ImportMapResolver;

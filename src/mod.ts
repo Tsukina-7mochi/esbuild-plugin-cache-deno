@@ -1,4 +1,4 @@
-import { esbuild, posix } from '../deps.ts';
+import { esbuild, path } from '../deps.ts';
 import type { ImportMap } from './importMapResolver.ts';
 import type { LockMapV3 } from './types.ts';
 import ImportMapResolver from './importMapResolver.ts';
@@ -16,6 +16,7 @@ import {
   onNpmNamespaceResolve,
   onNpmResolve,
 } from './buildCallback/npmBuildCallback.ts';
+import { registerLoaderCallback } from './buildCallback/loaderBuildCallback.ts';
 
 type LoaderRules = {
   test: RegExp;
@@ -32,7 +33,7 @@ type Options = {
   importmapBasePath?: string;
   importMapBasePath?: string;
   loaderRules?: LoaderRules;
-}
+};
 
 type NormalizedOptions = {
   lockMap: LockMapV3;
@@ -40,7 +41,7 @@ type NormalizedOptions = {
   importMap?: ImportMap;
   importMapBasePath?: string;
   loaderRules?: LoaderRules;
-}
+};
 
 const defaultLoaderRules: LoaderRules = [
   { test: /\.(c|m)?js$/, loader: 'js' },
@@ -74,16 +75,18 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
       npm: options.lockMap.packages?.npm ?? {},
     },
   };
-  const cacheRoot = posix.toFileUrl(options.denoCacheDirectory);
+  const cacheRoot = path.toFileUrl(options.denoCacheDirectory);
   if (!cacheRoot.pathname.endsWith('/')) {
     cacheRoot.pathname += '/';
   }
   const importMap = options.importMap ?? {};
-  const importMapBasePath_ = posix.resolve(options.importMapBasePath ?? '.');
+  const importMapBasePath_ = path.resolve(
+    options.importMapBasePath ?? Deno.cwd(),
+  );
   const importMapBasePath = importMapBasePath_.endsWith('/')
     ? importMapBasePath_
     : `${importMapBasePath_}/`;
-  const importMapBaseUrl = posix.toFileUrl(importMapBasePath);
+  const importMapBaseUrl = path.toFileUrl(importMapBasePath);
   const importMapResolver = new ImportMapResolver(importMap, importMapBaseUrl);
   const loaderRules = [
     // Rules that appear early take precedence
@@ -111,27 +114,17 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
     // deno-lint-ignore explicit-function-return-type
     setup(build) {
       // redirect imports in import map
-      const importKeys = new Set([
-        ...Object.keys(importMap?.imports ?? {}),
-        ...Object.values(importMap?.scopes ?? {})
-          .flatMap((map) => Object.keys(map)),
-      ]);
-      for (const importKey of importKeys) {
-        const filter = importKey.endsWith('/')
-          ? new RegExp(`^${importKey}`, 'i')
-          : new RegExp(`^${importKey}$`, 'i');
-
-        build.onResolve(
-          { filter },
-          onImportMapKeyResolve(
-            build,
-            importMapResolver,
-            importMapBasePath,
-            remotePluginNamespace,
-            npmPluginNamespace,
-          ),
-        );
-      }
+      // TODO: use filter
+      build.onResolve(
+        { filter: /^.*$/ },
+        onImportMapKeyResolve(
+          build,
+          importMapResolver,
+          importMapBasePath,
+          remotePluginNamespace,
+          npmPluginNamespace,
+        ),
+      );
 
       // listen import starts with "http" and "https"
       build.onResolve(
@@ -171,8 +164,12 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
         ),
       );
 
-      // verify the hash of the cached file
-      // and return the content with the appropriate loader
+      // apply loader rules
+      for (const rule of options.loaderRules ?? []) {
+        registerLoaderCallback(build, rule.test, rule.loader);
+      }
+
+      // return the content with the appropriate loader
       build.onLoad(
         { filter: /.*/, namespace: remotePluginNamespace },
         onRemoteLoad(),

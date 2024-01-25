@@ -21,12 +21,7 @@ const resolveImport = function (
   }
 
   if (importMapResolver !== undefined) {
-    const importerDirname = new URL('.', importer);
-    if (url === null) {
-      url = importMapResolver.resolve(moduleName, importerDirname);
-    } else {
-      url = importMapResolver.resolve(url.href, importerDirname);
-    }
+    url = importMapResolver.resolve(url?.href ?? moduleName, importer);
   }
 
   return url;

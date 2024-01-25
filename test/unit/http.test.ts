@@ -1,43 +1,59 @@
-import { asserts } from '../../deps.ts';
-import * as http from '../../src/http.ts';
+import { assertEquals } from 'assert';
+import { resolveImport, toCacheURL } from '../../src/http.ts';
 
-const testName = (name: string) => `[http] ${name}`;
+Deno.test('resolveImport', async (testContext) => {
+  const testResolveImport = (
+    moduleName: string,
+    importer: string,
+    expected: string | null,
+  ) => {
+    return testContext.step(`${moduleName} (${expected}) <- ${importer}`, async () => {
+      const actual = resolveImport(moduleName, new URL(importer));
+      assertEquals(actual?.href, expected);
+    });
+  }
 
-Deno.test(testName('resolveImport absolute'), () => {
-  const actual = http.resolveImport(
-    '/test.js',
-    new URL('https://example.com/path/file.js')
+  await testResolveImport(
+    'https://example.com/package/index.js',
+    'protocol:///any-url',
+    'https://example.com/package/index.js'
   );
 
-  asserts.assertEquals(actual, new URL('https://example.com/test.js'));
+  await testResolveImport(
+    '/foo.js',
+    'https://example.com/package/index.js',
+    'https://example.com/foo.js'
+  );
+
+  await testResolveImport(
+    './foo.js',
+    'https://example.com/package/index.js',
+    'https://example.com/package/foo.js'
+  );
+
+  await testResolveImport(
+    '../foo.js',
+    'https://example.com/package/index.js',
+    'https://example.com/foo.js'
+  );
 });
 
-Deno.test(testName('resolveImport relative'), () => {
-  const actual = http.resolveImport(
-    './test.js',
-    new URL('https://example.com/path/file.js')
-  );
+Deno.test('toCacheURL', async (testContext) => {
+  const testToCacheURL = function(
+    url: string,
+    cacheRoot: string,
+    expected: string,
+  ) {
+    return testContext.step(url, () => {
+      const actual = toCacheURL(new URL(url), new URL(cacheRoot)).href;
 
-  asserts.assertEquals(actual, new URL('https://example.com/path/test.js'));
-});
+      assertEquals(actual, expected);
+    });
+  }
 
-Deno.test(testName('resolveImport relative (parent)'), () => {
-  const actual = http.resolveImport(
-    '../test.js',
-    new URL('https://example.com/path/file.js')
-  );
-
-  asserts.assertEquals(actual, new URL('https://example.com/test.js'));
-});
-
-Deno.test(testName('toCacheURL'), () => {
-  const actual = http.toCacheURL(
-    new URL('https://example.com/test.js'),
-    new URL('file:///home/user/.cache/deno/')
-  );
-
-  asserts.assertEquals(
-    actual,
-    new URL('file:///home/user/.cache/deno/deps/https/example.com/062b4f93067a219972f47a23d79b25200061a2149da746af1395ed8f15752a99')
+  await testToCacheURL(
+    'https://example.com/package/index.js',
+    'file:///cache/',
+    'file:///cache/deps/https/example.com/e828a20945a43e9a7cd0946c44ea9b69942446887e6a188edb6ecde7a8256bf1'
   );
 });

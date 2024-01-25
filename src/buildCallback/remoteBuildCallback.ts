@@ -1,7 +1,8 @@
-import { esbuild, posix } from '../../deps.ts';
-import * as http from '../http.ts';
+import { esbuild, path } from '../../deps.ts';
+import { resolveImport, toCacheURL } from '../http.ts';
 import ImportMapResolver from '../importMapResolver.ts';
 import { LockMapV3 } from '../types.ts';
+import { createURL } from '../util.ts';
 
 const remotePluginNamespace = 'net.ts7m.esbuild-cache-plugin.general';
 type RemotePluginData = {
@@ -16,27 +17,28 @@ const onRemoteResolve = (
   lockMap: LockMapV3,
   cacheRoot: URL,
   getLoader: (path: string) => esbuild.Loader | null,
-) =>
-(args: esbuild.OnResolveArgs): esbuild.OnResolveResult | null => {
-  const fileUrl = new URL(args.path);
+) => (args: esbuild.OnResolveArgs): esbuild.OnResolveResult | null => {
+  let remoteURLString = args.path;
+  const redirects = lockMap.redirects ?? {};
+  const remote = lockMap.remote ?? {};
 
-  if (lockMap.remote === undefined) {
+  while(remoteURLString in redirects) {
+    remoteURLString = redirects[remoteURLString];
+  }
+  const fileHash = remote[remoteURLString];
+  if(typeof fileHash !== 'string') {
     return null;
   }
 
-  if (!(fileUrl.href in lockMap.remote)) {
-    // check if the redirect destination is in list
+  const remoteURL = createURL(remoteURLString);
+  if(remoteURL === null) {
     return null;
   }
 
-  if (fileUrl === null) {
-    return null;
-  }
-  const cachePath = posix.fromFileUrl(http.toCacheURL(fileUrl, cacheRoot));
-  const loader = getLoader(fileUrl.href) ?? undefined;
-  const fileHash = lockMap.remote[fileUrl.href];
+  const cachePath = toCacheURL(remoteURL, cacheRoot).href;
+  const loader = getLoader(remoteURL.href) ?? undefined;
   return {
-    path: fileUrl.href,
+    path: remoteURLString,
     namespace: remotePluginNamespace,
     pluginData: remotePluginData({ loader, cachePath, fileHash }),
   };
@@ -47,7 +49,7 @@ const onRemoteNamespaceResolve = (
   importMapResolver: ImportMapResolver,
 ) =>
 (args: esbuild.OnResolveArgs): Promise<esbuild.OnResolveResult> | null => {
-  const fileUrl = http.resolveImport(
+  const fileUrl = resolveImport(
     args.path,
     new URL(args.importer),
     importMapResolver,
@@ -59,15 +61,21 @@ const onRemoteNamespaceResolve = (
   return build.resolve(fileUrl.href, {
     kind: args.kind,
     importer: args.importer,
-  });
+  }).then((res) => ({
+    ...res,
+    warnings: [
+      ...res.warnings,
+      ...importMapResolver.warnings,
+    ],
+  }));
 };
 
 const onRemoteLoad =
   () => async (args: esbuild.OnLoadArgs): Promise<esbuild.OnLoadResult> => {
     const pluginData = args.pluginData as RemotePluginData;
 
-    try {
-      const contents = await Deno.readFile(pluginData.cachePath);
+    // try {
+      const contents = await Deno.readFile(path.fromFileUrl(pluginData.cachePath));
       const hashArrayBuffer = await crypto.subtle.digest(
         'SHA-256',
         contents,
@@ -84,14 +92,14 @@ const onRemoteLoad =
       }
 
       return { contents, loader: pluginData.loader };
-    } catch (err) {
-      return {
-        errors: [{
-          text: `Failed to load cache of ${args.path}`,
-          detail: (err instanceof Error ? err.message : err),
-        }],
-      };
-    }
+    // } catch (err) {
+    //   return {
+    //     errors: [{
+    //       text: `Failed to load cache of ${args.path}`,
+    //       detail: (err instanceof Error ? err.message : err),
+    //     }],
+    //   };
+    // }
   };
 
 export {

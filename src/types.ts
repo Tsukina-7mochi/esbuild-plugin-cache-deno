@@ -10,7 +10,7 @@ type LockMapV2 = {
       };
     };
   };
-}
+};
 
 type LockMapV3 = {
   version: '3';
@@ -25,7 +25,7 @@ type LockMapV3 = {
       };
     };
   };
-}
+};
 
 type PackageJSON = {
   name: string;
@@ -40,8 +40,4 @@ type PackageJSON = {
   };
 };
 
-export type {
-  LockMapV2,
-  LockMapV3,
-  PackageJSON,
-};
+export type { LockMapV2, LockMapV3, PackageJSON };

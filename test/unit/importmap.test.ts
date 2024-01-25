@@ -1,189 +1,284 @@
-import { asserts } from '../../deps.ts';
-import ImportMapResolver from '../../src/importMapResolver.ts';
+import { assertEquals } from 'assert';
+import ImportMapResolver, { ImportMap } from '../../src/importMapResolver.ts';
 
-const testName = (name: string) => `[importMap] ${name}`;
+Deno.test('ImportMapResolver.resolve', async (testContext) => {
+  const testImportMap = (name: string, testContext_ = testContext) => (
+    importMap: ImportMap,
+    baseURL: URL | string,
+    specifier: string,
+    importer: URL | string,
+    expected: string | null
+  ) => {
+    return testContext_.step(name ?? `${specifier} -> ${expected}`, () => {
+      const resolver = new ImportMapResolver(importMap, new URL(baseURL));
+      const actual = resolver.resolve(specifier, new URL(importer));
 
-Deno.test(testName('Simple import relative'), () => {
-  const resolver = new ImportMapResolver(
+      assertEquals(actual?.href, expected);
+    });
+  }
+
+  await testImportMap('normal specifier -> URL')(
     {
       imports: {
-        'zzz': './xxx/yyy/zzz.js',
+        'foo': 'https://example.com/foo/index.js',
+      }
+    },
+    'https://example.com/index.js',
+    'foo',
+    'https://example.com/index.js',
+    'https://example.com/foo/index.js',
+  );
+
+  await testContext.step('normal specifier -> relative path', async (testContext) => {
+    await testImportMap('starts with "/"', testContext)(
+      {
+        imports: {
+          'foo': '/foo/index.js',
+        }
+      },
+      'https://example.com/path/to/index.js',
+      'foo',
+      'https://example.com/path/to/index.js',
+      'https://example.com/foo/index.js',
+    );
+
+    await testImportMap('starts with "./"', testContext)(
+      {
+        imports: {
+          'foo': './foo/index.js',
+        }
+      },
+      'https://example.com/path/to/index.js',
+      'foo',
+      'https://example.com/path/to/index.js',
+      'https://example.com/path/to/foo/index.js',
+    );
+
+    await testImportMap('starts with "../"', testContext)(
+      {
+        imports: {
+          'foo': '../foo/index.js',
+        }
+      },
+      'https://example.com/path/to/index.js',
+      'foo',
+      'https://example.com/path/to/index.js',
+      'https://example.com/path/foo/index.js',
+    );
+  });
+
+  await testContext.step('relative specifier -> URL', async (testContext) => {
+    await testImportMap('starts with "/"', testContext)(
+      {
+        imports: {
+          '/foo': 'https://example.com/foo/index.js',
+        }
+      },
+      'file:///path/to/index.js',
+      'file:///foo',
+      'file:///path/to/index.js',
+      'https://example.com/foo/index.js',
+    );
+
+    await testImportMap('starts with "./"', testContext)(
+      {
+        imports: {
+          './foo': 'https://example.com/foo/index.js',
+        }
+      },
+      'file:///path/to/index.js',
+      'file:///path/to/foo',
+      'file:///path/to/index.js',
+      'https://example.com/foo/index.js',
+    );
+
+    await testImportMap('starts with "../"', testContext)(
+      {
+        imports: {
+          '../foo': 'https://example.com/foo/index.js',
+        }
+      },
+      'file:///path/to/index.js',
+      'file:///path/foo',
+      'file:///path/to/index.js',
+      'https://example.com/foo/index.js',
+    );
+  });
+
+  await testImportMap('specifier ends with "/" -> URL')(
+    {
+      imports: {
+        'foo/': 'https://example.com/foo/',
       },
     },
-    new URL('file:///path/to/root/')
+    'file:///path/to/index.js',
+    'foo/bar.js',
+    'file:///path/to/index.js',
+    'https://example.com/foo/bar.js',
   );
-  const actual = resolver.resolve('zzz', new URL('file:///path/to/root/'));
 
-  asserts.assertEquals(actual, new URL('file:///path/to/root/xxx/yyy/zzz.js'));
-});
-
-Deno.test(testName('Simple import absolute'), () => {
-  const resolver = new ImportMapResolver(
+  await testImportMap('URL specifier (polyfill) #1')(
     {
       imports: {
-        'zzz': '/xxx/yyy/zzz.js',
+        'https://example.com/foo/': 'https://example-pollyfill.com/foo/',
       },
     },
-    new URL('file:///path/to/root/')
+    'file:///path/to/index.js',
+    'https://example.com/foo/bar.js',
+    'file:///path/to/index.js',
+    'https://example-pollyfill.com/foo/bar.js'
   );
-  const actual = resolver.resolve('zzz', new URL('file:///path/to/root/'));
 
-  asserts.assertEquals(actual, new URL('file:///xxx/yyy/zzz.js'));
-});
-
-Deno.test(testName('Simple import URL'), () => {
-  const resolver = new ImportMapResolver(
+  await testImportMap('URL specifier (polyfill) #2')(
     {
       imports: {
-        'module': 'https://example.com/path/to/file.js',
+        'node:fs': 'https://example.com/node-fs-polyfill@1.0.0/index.js',
       },
     },
-    new URL('file:///path/to/root/')
+    'file:///path/to/index.js',
+    'node:fs',
+    'file:///path/to/index.js',
+    'https://example.com/node-fs-polyfill@1.0.0/index.js'
   );
-  const actual = resolver.resolve('module', new URL('file:///path/to/root/'));
 
-  asserts.assertEquals(actual, new URL('https://example.com/path/to/file.js'));
-});
-
-Deno.test(testName('Simple import npm URL'), () => {
-  const resolver = new ImportMapResolver(
-    {
-      imports: {
-        'module': 'npm:/module@1.0.0/index.js',
-      },
-    },
-    new URL('file:///path/to/root/')
-  );
-  const actual = resolver.resolve('module', new URL('file:///path/to/root/'));
-
-  asserts.assertEquals(actual, new URL('npm:/module@1.0.0/index.js'));
-});
-
-Deno.test(testName('Path import relative'), () => {
-  const resolver = new ImportMapResolver(
-    {
-      imports: {
-        'yyy/': './xxx/yyy/',
-      },
-    },
-    new URL('file:///path/to/root/')
-  );
-  const actual = resolver.resolve('yyy/zzz.js', new URL('file:///path/to/root/'));
-
-  asserts.assertEquals(actual, new URL('file:///path/to/root/xxx/yyy/zzz.js'));
-});
-
-Deno.test(testName('Path import URL'), () => {
-  const resolver = new ImportMapResolver(
-    {
-      imports: {
-        'module/': 'https://example.com/path/to/module/',
-      },
-    },
-    new URL('file:///path/to/root/')
-  );
-  const actual = resolver.resolve('module/file.js', new URL('file:///path/to/root/'));
-
-  asserts.assertEquals(actual, new URL('https://example.com/path/to/module/file.js'));
-});
-
-Deno.test(testName('Scope match'), () => {
-  const resolver = new ImportMapResolver(
-    {
-      imports: {
-        'module': 'https://example.com/path/to/module/file.js',
-      },
-      scopes: {
-        '/src/': {
-          'module': 'https://example2.com/path/to/module/file.js',
+  await testContext.step('module specifier priority', () => {
+    const resolver = new ImportMapResolver(
+      {
+        imports: {
+          'foo/': 'https://example.com/foo/',
+          'foo/bar/': 'https://bar-example.com/bar/',
         },
       },
-    },
-    new URL('file:///path/to/root/')
-  );
-  const actual = resolver.resolve('module', new URL('file:///path/to/root/src/'));
+      new URL('file:///path/to/index.js')
+    );
 
-  asserts.assertEquals(actual, new URL('https://example2.com/path/to/module/file.js'));
-});
+    assertEquals(
+      resolver.resolve('foo/index.js', new URL('file:///path/to/index.js',))?.href,
+      'https://example.com/foo/index.js'
+    );
+    assertEquals(
+      resolver.resolve('foo/bar/index.js', new URL('file:///path/to/index.js',))?.href,
+      'https://bar-example.com/bar/index.js'
+    );
+  });
 
-Deno.test(testName('Scope default'), () => {
-  const resolver = new ImportMapResolver(
-    {
-      imports: {
-        'module': 'https://example.com/path/to/module/file.js',
-      },
-      scopes: {
-        '/src/': {
-          'module': 'https://example2.com/path/to/module/file.js',
+  await testContext.step('importer in scope', async (testContext) => {
+    await testContext.step('specific scope', () => {
+      const resolver = new ImportMapResolver(
+        {
+          imports: {
+            'foo/': 'https://example.com/foo/',
+          },
+          scopes: {
+            './scoped/index.js': {
+              'foo/': 'https://example-polyfill.com/'
+            }
+          }
         },
-      },
-    },
-    new URL('file:///path/to/root/')
-  );
-  const actual = resolver.resolve('module', new URL('file:///path/to/root/foo/'));
+        new URL('file:///path/to/index.js')
+      );
 
-  asserts.assertEquals(actual, new URL('https://example.com/path/to/module/file.js'));
-});
+      assertEquals(
+        resolver.resolve('foo/index.js', new URL('file:///path/to/index.js'))?.href,
+        'https://example.com/foo/index.js'
+      );
+      assertEquals(
+        resolver.resolve('foo/index.js', new URL('file:///path/to/scoped/index.js'))?.href,
+        'https://example-polyfill.com/index.js'
+      );
+    });
 
-Deno.test(testName('Scope priority'), () => {
-  const resolver = new ImportMapResolver(
-    {
-      imports: {
-        'module': 'https://example.com/path/to/module/file.js',
-      },
-      scopes: {
-        '/src/': {
-          'module': 'https://example2.com/path/to/module/file.js',
+    await testContext.step('scope ends with "/"', () => {
+      const resolver = new ImportMapResolver(
+        {
+          imports: {
+            'foo/': 'https://example.com/foo/',
+          },
+          scopes: {
+            './scoped/': {
+              'foo/': 'https://example-polyfill.com/'
+            }
+          }
         },
-        '/src/sub/sub2': {
-          'module': 'https://example2.com/path/to/module/file3.js',
+        new URL('file:///path/to/index.js')
+      );
+
+      assertEquals(
+        resolver.resolve('foo/index.js', new URL('file:///path/to/index.js'))?.href,
+        'https://example.com/foo/index.js'
+      );
+      assertEquals(
+        resolver.resolve('foo/index.js', new URL('file:///path/to/scoped/index.js'))?.href,
+        'https://example-polyfill.com/index.js'
+      );
+      assertEquals(
+        resolver.resolve('foo/index.js', new URL('file:///path/to/scoped/bar.js'))?.href,
+        'https://example-polyfill.com/index.js'
+      );
+    });
+
+    await testContext.step('URL scope', () => {
+      const resolver = new ImportMapResolver(
+        {
+          imports: {
+            'foo/': 'https://example.com/foo/',
+          },
+          scopes: {
+            'https://example.com/': {
+              'foo/': 'https://example-polyfill.com/'
+            }
+          }
         },
-        '/src/sub': {
-          'module': 'https://example2.com/path/to/module/file2.js',
+        new URL('file:///path/to/index.js')
+      );
+
+      assertEquals(
+        resolver.resolve('foo/index.js', new URL('file:///path/to/index.js'))?.href,
+        'https://example.com/foo/index.js'
+      );
+      assertEquals(
+        resolver.resolve('foo/index.js', new URL('https://example.com/index.js'))?.href,
+        'https://example-polyfill.com/index.js'
+      );
+    });
+  });
+
+  await testContext.step('scope priority', () => {
+    const resolver = new ImportMapResolver(
+      {
+        imports: {
+          'foo/': 'https://example.com/foo/',
         },
+        scopes: {
+          './scoped/': {
+            'foo/': 'https://example-polyfill.com/'
+          },
+          './scoped/bar.js': {
+            'foo/': 'https://example-polyfill-2.com/'
+          },
+          './scoped/scoped2/': {
+            'foo/': 'https://example-polyfill-3.com/'
+          }
+        }
       },
-    },
-    new URL('file:///path/to/root/')
-  );
-  const actual = resolver.resolve('module', new URL('file:///path/to/root/foo/src/sub/sub2/'));
+      new URL('file:///path/to/index.js')
+    );
 
-  asserts.assertEquals(actual, new URL('https://example2.com/path/to/module/file3.js'));
-});
-
-Deno.test(testName('Scope URL path match'), () => {
-  const resolver = new ImportMapResolver(
-    {
-      imports: {
-        'module': 'https://example.com/path/to/module/file.js',
-      },
-      scopes: {
-        'https://example2.com/path/': {
-          'module': 'https://example2.com/path/to/module/file.js',
-        },
-      },
-    },
-    new URL('file:///path/to/root/')
-  );
-  const actual = resolver.resolve('module', new URL('https://example2.com/path/'));
-
-  asserts.assertEquals(actual, new URL('https://example2.com/path/to/module/file.js'));
-});
-
-Deno.test(testName('Scope URL path default'), () => {
-  const resolver = new ImportMapResolver(
-    {
-      imports: {
-        'module': 'https://example.com/path/to/module/file.js',
-      },
-      scopes: {
-        'https://example2.com/path/': {
-          'module': 'https://example2.com/path/to/module/file.js',
-        },
-      },
-    },
-    new URL('file:///path/to/root/')
-  );
-  const actual = resolver.resolve('module', new URL('https://example2.com/'));
-
-  asserts.assertEquals(actual, new URL('https://example.com/path/to/module/file.js'));
+    assertEquals(
+      resolver.resolve('foo/index.js', new URL('file:///path/to/index.js'))?.href,
+      'https://example.com/foo/index.js'
+    );
+    assertEquals(
+      resolver.resolve('foo/index.js', new URL('file:///path/to/scoped/index.js'))?.href,
+      'https://example-polyfill.com/index.js'
+    );
+    assertEquals(
+      resolver.resolve('foo/index.js', new URL('file:///path/to/scoped/bar.js'))?.href,
+      'https://example-polyfill-2.com/index.js'
+    );
+    assertEquals(
+      resolver.resolve('foo/index.js', new URL('file:///path/to/scoped/scoped2/index.js'))?.href,
+      'https://example-polyfill-3.com/index.js'
+    );
+  });
 });

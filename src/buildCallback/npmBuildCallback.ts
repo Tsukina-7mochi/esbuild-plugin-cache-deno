@@ -1,8 +1,7 @@
-import { esbuild, posix } from '../../deps.ts';
+import { esbuild, path } from '../../deps.ts';
 import * as npm from '../npm.ts';
 import ImportMapResolver from '../importMapResolver.ts';
 import { LockMapV3 } from '../types.ts';
-import { OnLoadResult } from 'https://deno.land/x/esbuild@v0.19.4/mod.js';
 
 const npmPluginNamespace = 'net.ts7m.esbuild-cache-plugin.npm';
 
@@ -24,7 +23,7 @@ async (
 ): Promise<esbuild.OnResolveResult | null> => {
   const importerUrl = await Promise.resolve()
     .then(() => new URL(args.importer))
-    .catch(() => posix.toFileUrl(args.importer))
+    .catch(() => path.toFileUrl(args.importer))
     .catch(() => null);
   if (importerUrl === null) {
     return null;
@@ -44,24 +43,25 @@ async (
   const loader = getLoader(url.href) ?? undefined;
   if (url.protocol === 'node:' && loader !== 'empty') {
     return {
-      errors: [{ text: 'Cannot import Node.js\'s core modules.' }],
+      errors: [{ text: "Cannot import Node.js's core modules." }],
     };
   }
 
   const cachePath = loader === 'empty'
     ? ''
-    : posix.fromFileUrl(npm.toCacheURL(url, cacheRoot));
+    : path.fromFileUrl(npm.toCacheURL(url, cacheRoot));
   // const hash = lockMap.npm.packages[pkgFullName].integrity;
 
   return {
     path: url.href,
     namespace: npmPluginNamespace,
     pluginData: npmPluginData({ loader, cachePath }),
+    warnings: [...importMapResolver.warnings]
   };
 };
 
 const onNpmLoad =
-  () => async (args: esbuild.OnLoadArgs): Promise<OnLoadResult> => {
+  () => async (args: esbuild.OnLoadArgs): Promise<esbuild.OnLoadResult> => {
     const pluginData = args.pluginData as NpmPluginData;
 
     try {
