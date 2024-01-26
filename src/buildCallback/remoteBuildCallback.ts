@@ -17,21 +17,22 @@ const onRemoteResolve = (
   lockMap: LockMapV3,
   cacheRoot: URL,
   getLoader: (path: string) => esbuild.Loader | null,
-) => (args: esbuild.OnResolveArgs): esbuild.OnResolveResult | null => {
+) =>
+(args: esbuild.OnResolveArgs): esbuild.OnResolveResult | null => {
   let remoteURLString = args.path;
   const redirects = lockMap.redirects ?? {};
   const remote = lockMap.remote ?? {};
 
-  while(remoteURLString in redirects) {
+  while (remoteURLString in redirects) {
     remoteURLString = redirects[remoteURLString];
   }
   const fileHash = remote[remoteURLString];
-  if(typeof fileHash !== 'string') {
+  if (typeof fileHash !== 'string') {
     return null;
   }
 
   const remoteURL = createURL(remoteURLString);
-  if(remoteURL === null) {
+  if (remoteURL === null) {
     return null;
   }
 
@@ -75,23 +76,25 @@ const onRemoteLoad =
     const pluginData = args.pluginData as RemotePluginData;
 
     // try {
-      const contents = await Deno.readFile(path.fromFileUrl(pluginData.cachePath));
-      const hashArrayBuffer = await crypto.subtle.digest(
-        'SHA-256',
-        contents,
-      );
-      const hashView = new Uint8Array(hashArrayBuffer);
-      const hashHexString = Array.from(hashView)
-        .map((b) => b.toString(16).padStart(2, '0'))
-        .join('');
+    const contents = await Deno.readFile(
+      path.fromFileUrl(pluginData.cachePath),
+    );
+    const hashArrayBuffer = await crypto.subtle.digest(
+      'SHA-256',
+      contents,
+    );
+    const hashView = new Uint8Array(hashArrayBuffer);
+    const hashHexString = Array.from(hashView)
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('');
 
-      if (hashHexString !== pluginData.fileHash) {
-        return {
-          errors: [{ text: `Outdated cache detected for ${args.path}` }],
-        };
-      }
+    if (hashHexString !== pluginData.fileHash) {
+      return {
+        errors: [{ text: `Outdated cache detected for ${args.path}` }],
+      };
+    }
 
-      return { contents, loader: pluginData.loader };
+    return { contents, loader: pluginData.loader };
     // } catch (err) {
     //   return {
     //     errors: [{

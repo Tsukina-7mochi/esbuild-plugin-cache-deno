@@ -56,7 +56,7 @@ async (
     path: url.href,
     namespace: npmPluginNamespace,
     pluginData: npmPluginData({ loader, cachePath }),
-    warnings: [...importMapResolver.warnings]
+    warnings: [...importMapResolver.warnings],
   };
 };
 

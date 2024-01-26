@@ -2,10 +2,10 @@ import { esbuild } from '../../deps.ts';
 
 const loaderPluginNamespace = 'net.ts7m.esbuild-cache-plugin.loader';
 
-const registerLoaderCallback = function(
+const registerLoaderCallback = function (
   build: esbuild.PluginBuild,
   filter: RegExp,
-  loader: esbuild.Loader
+  loader: esbuild.Loader,
 ): void {
   build.onResolve({ filter }, (args) => {
     return {
@@ -17,16 +17,11 @@ const registerLoaderCallback = function(
   build.onLoad(
     { filter, namespace: loaderPluginNamespace },
     async (args) => {
-      const contents = loader === 'empty'
-        ? ''
-        : await Deno.readFile(args.path);
+      const contents = loader === 'empty' ? '' : await Deno.readFile(args.path);
 
       return { contents, loader };
     },
   );
-}
+};
 
-export {
-  registerLoaderCallback,
-  loaderPluginNamespace
-}
+export { loaderPluginNamespace, registerLoaderCallback };

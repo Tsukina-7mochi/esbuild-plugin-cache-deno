@@ -13,6 +13,9 @@
       "deno.window"
     ]
   },
+  "exclude": [
+    "example/*/bundle.js"
+  ],
   "lint": {
     "include": [
       "mod.ts",

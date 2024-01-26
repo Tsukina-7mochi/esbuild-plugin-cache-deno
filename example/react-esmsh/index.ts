@@ -1,6 +1,6 @@
 import * as React from 'react';
 import * as ReactDOM from 'react-dom/client';
-import Counter from "./counter.tsx";
+import Counter from './counter.tsx';
 
 globalThis.addEventListener('DOMContentLoaded', () => {
   const element = React.createElement(Counter);

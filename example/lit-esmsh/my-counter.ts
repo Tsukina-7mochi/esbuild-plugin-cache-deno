@@ -1,11 +1,11 @@
-import { LitElement, html } from 'lit';
+import { html, LitElement } from 'lit';
 // decorators are not currently supported by esbuild
 // import { customElement, property } from 'lit/decorators.js';
 
 export class MyCounter extends LitElement {
   static properties = {
-    count: { type: Number }
-  }
+    count: { type: Number },
+  };
 
   declare count: number;
 

@@ -95,7 +95,7 @@ const resolvePackageSpecifier = function (
       return null;
     }
     const module = decomposeNPMModuleURL(moduleSpecifier);
-    if(module == null) {
+    if (module == null) {
       return null;
     }
     const moduleURL = lockMap.packages?.specifiers?.[`npm:${module.fullName}`];
@@ -108,7 +108,7 @@ const resolvePackageSpecifier = function (
     if (!importerModule) {
       return null;
     }
-    if(moduleSpecifier === importerModule.name) {
+    if (moduleSpecifier === importerModule.name) {
       return new URL(`npm:${importerModule.fullName}`);
     }
     const module = lockMap.packages?.npm?.[importerModule.fullName]

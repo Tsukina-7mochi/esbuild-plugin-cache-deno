@@ -45,8 +45,8 @@ const onImportMapKeyResolve = (
     ...res,
     warnings: [
       ...res.warnings,
-      ...importMapResolver.warnings
-    ]
+      ...importMapResolver.warnings,
+    ],
   }));
 };
 
