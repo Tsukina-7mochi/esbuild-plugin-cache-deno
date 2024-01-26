@@ -38,14 +38,6 @@
       }
     }
   },
-  "redirects": {
-    "https://esm.sh/react": "https://esm.sh/react@18.2.0",
-    "https://esm.sh/react-dom": "https://esm.sh/react-dom@18.2.0",
-    "https://esm.sh/react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
-    "https://esm.sh/v128/@types/react@~18.2/index.d.ts": "https://esm.sh/v128/@types/react@18.2.38/index.d.ts",
-    "https://esm.sh/v135/@types/react-dom@~18.2/client~.d.ts": "https://esm.sh/v135/@types/react-dom@18.2.18/client~.d.ts",
-    "https://esm.sh/v135/@types/react-dom@~18.2/index.d.ts": "https://esm.sh/v135/@types/react-dom@18.2.18/index.d.ts"
-  },
   "remote": {
     "https://deno.land/std@0.203.0/assert/assert.ts": "9a97dad6d98c238938e7540736b826440ad8c1c1e54430ca4c4e623e585607ee",
     "https://deno.land/std@0.203.0/assert/assertion_error.ts": "4d0bde9b374dfbcbe8ac23f54f567b77024fb67dbb1906a852d67fe050d42f56",
@@ -117,13 +109,6 @@
     "https://deno.land/x/denoflate@1.2.1/mod.ts": "f5628e44b80b3d80ed525afa2ba0f12408e3849db817d47a883b801f9ce69dd6",
     "https://deno.land/x/denoflate@1.2.1/pkg/denoflate.js": "b9f9ad9457d3f12f28b1fb35c555f57443427f74decb403113d67364e4f2caf4",
     "https://deno.land/x/denoflate@1.2.1/pkg/denoflate_bg.wasm.js": "d581956245407a2115a3d7e8d85a9641c032940a8e810acbd59ca86afd34d44d",
-    "https://deno.land/x/esbuild@v0.19.4/mod.js": "6277018cfbcad3912fd346409e0b2a9807cf10c9555a15e4aac299b3194fa4fb",
-    "https://esm.sh/react-dom@18.2.0": "f6b0d147f7c364819144f06e24839ed89354ce25d8b6608de57871130b19a0b2",
-    "https://esm.sh/react-dom@18.2.0/client": "391c0483ce063105b7d0422c653da70d52ac5f4efa02b0873ce8b70c4dc9ff61",
-    "https://esm.sh/react@18.2.0": "8950a34a030620fce8349d6bd3913b3bdb186c5ec7968fa5ba4d054e22d78e6c",
-    "https://esm.sh/stable/react@18.2.0/denonext/react.mjs": "3c4f23bcfc53b256fcfaf6f834fa9f584c3bb7be667b2682c6cb6ba8ef88f8e6",
-    "https://esm.sh/v135/react-dom@18.2.0/denonext/client.js": "67082d736d11d0d288a4d10f260ab19cbf556c010b2d057088b0b4a5d10338a5",
-    "https://esm.sh/v135/react-dom@18.2.0/denonext/react-dom.mjs": "8191fc377ea7083cca5640699c4abd75de033089eb932799e29aa04bb136838f",
-    "https://esm.sh/v135/scheduler@0.23.0/denonext/scheduler.mjs": "cdbc6d2823e2c6fffcb14501146ff2602a38c48d3c9dd9268f308e833ede2b49"
+    "https://deno.land/x/esbuild@v0.19.4/mod.js": "6277018cfbcad3912fd346409e0b2a9807cf10c9555a15e4aac299b3194fa4fb"
   }
 }

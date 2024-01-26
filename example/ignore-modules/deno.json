@@ -1,1 +1,6 @@
-{}
+{
+  "tasks": {
+    "build": "deno run -A build.ts",
+    "cache": "rm deno.lock && deno cache **/*.ts"
+  }
+}
