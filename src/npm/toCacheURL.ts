@@ -1,3 +1,8 @@
+import { path } from '../../deps.ts';
+import { decomposeNPMModuleURL } from './moduleName.ts';
+
+const semverRegExp = /^([0-9]+)\.([0-9]+)\.([0-9]+)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+[0-9A-Za-z-]+)?/;
+
 const decomposePackageNameVersion = function (
   pkgStr: string,
 ): [string, string] {
@@ -10,17 +15,23 @@ const decomposePackageNameVersion = function (
 };
 
 const toCacheURL = function (url: URL, cacheRoot: URL): URL {
-  const pathSegments = url.pathname.split('/');
-  const pkgFullName = pathSegments[1];
-  const [pkgName, pkgVersion] = decomposePackageNameVersion(pkgFullName);
-  const path = [
+  const module = decomposeNPMModuleURL(url.href);
+  if(module === null) {
+    throw Error(`Cannot convert ${url.href} into cache URL`);
+  }
+  if(typeof module.version !== 'string') {
+    throw Error(`Cannot convert ${url.href} into cache URL`);
+  }
+
+  const pkgVersion = module.version.match(semverRegExp)?.[0] ?? '.';
+  const cachePath = path.join(
     'npm',
     'registry.npmjs.org',
-    pkgName,
+    module.name,
     pkgVersion,
-    ...pathSegments.slice(2),
-  ].join('/');
-  return new URL(path, cacheRoot);
+    module.path,
+  );
+  return new URL(cachePath, cacheRoot);
 };
 
 export default toCacheURL;

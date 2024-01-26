@@ -94,15 +94,22 @@ const resolvePackageSpecifier = function (
     if (!moduleSpecifier.startsWith('npm:')) {
       return null;
     }
-    const module = lockMap.packages?.specifiers?.[moduleSpecifier];
-    if (!module) {
+    const module = decomposeNPMModuleURL(moduleSpecifier);
+    if(module == null) {
       return null;
     }
-    return new URL(module);
+    const moduleURL = lockMap.packages?.specifiers?.[`npm:${module.fullName}`];
+    if (!moduleURL) {
+      return null;
+    }
+    return new URL(`${moduleURL}${module.path}`);
   } else if (importer.protocol === 'npm:') {
     const importerModule = decomposeNPMModuleURL(importer.href);
     if (!importerModule) {
       return null;
+    }
+    if(moduleSpecifier === importerModule.name) {
+      return new URL(`npm:${importerModule.fullName}`);
     }
     const module = lockMap.packages?.npm?.[importerModule.fullName]
       ?.dependencies?.[moduleSpecifier];
@@ -141,14 +148,7 @@ const resolvePackageImport = async function (
   }
   const packageJSON = JSON.parse(await Deno.readTextFile(packageJSONFileURL));
   const packageExports = getPackageJSONExports(packageJSON);
-  if (module.path === '' || module.path === '/') {
-    const main = packageExports['.'];
-    if (typeof main === 'string') {
-      return new URL(main, packageURL);
-    }
-  }
-
-  const resolved = resolvePackageJSONExports(module.path, packageExports);
+  const resolved = resolvePackageJSONExports(`.${module.path}`, packageExports);
   if (typeof resolved === 'string') {
     return new URL(resolved, packageURL);
   }

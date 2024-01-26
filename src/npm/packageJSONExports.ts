@@ -76,7 +76,7 @@ const resolvePackageJSONExports = function (
   specifier: string,
   exports: Record<string, string>,
 ): string | null {
-  if (specifier === '' || specifier === '.') {
+  if (specifier === '' || specifier === '.' || specifier === './') {
     return exports['.'];
   }
 

@@ -84,4 +84,11 @@ Deno.test('decomposeNPMModuleURL', async (testContext) => {
     fullName: '@types/react@1.0.0',
     path: '/index.js',
   });
+
+  await testDecomposeNPMModuleURL('npm:react-dom@18.2.0_react@18.2.0/index.js', {
+    name: 'react-dom',
+    version: '18.2.0_react@18.2.0',
+    fullName: 'react-dom@18.2.0_react@18.2.0',
+    path: '/index.js',
+  });
 });
