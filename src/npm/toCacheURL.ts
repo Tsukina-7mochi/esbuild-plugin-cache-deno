@@ -4,17 +4,6 @@ import { decomposeNPMModuleURL } from './moduleName.ts';
 const semverRegExp =
   /^([0-9]+)\.([0-9]+)\.([0-9]+)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+[0-9A-Za-z-]+)?/;
 
-const decomposePackageNameVersion = function (
-  pkgStr: string,
-): [string, string] {
-  const index = pkgStr.lastIndexOf('@');
-  if (index <= 0) {
-    return [pkgStr, ''];
-  } else {
-    return [pkgStr.slice(0, index), pkgStr.slice(index + 1)];
-  }
-};
-
 const toCacheURL = function (url: URL, cacheRoot: URL): URL {
   const module = decomposeNPMModuleURL(url.href);
   if (module === null) {
