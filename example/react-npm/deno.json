@@ -1,0 +1,9 @@
+{
+  "compilerOptions": {
+    "lib": [
+      "DOM"
+    ],
+    "jsx": "react-jsx"
+  },
+  "importMap": "import_map.json"
+}
