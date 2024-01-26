@@ -3,12 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>React test</title>
+  <title>Lit from esm.sh</title>
   <script src="./bundle.js"></script>
+  <style>
+    :root {
+      background-color: #202020;
+      color: white;
+    }
+    h1 {
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      width: 100dvw;
+      height: 100dvh;
+      margin: 0;
+      padding: 0;
+    }
+    main {
+      width: 40em;
+      height: 100%;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+  </style>
 </head>
 <body>
-  <div id="root">
-    <my-counter></my-counter>
-  </div>
+  <main>
+    <h1>Lit from esm.sh</h1>
+    <div id="root">
+      <my-counter></my-counter>
+    </div>
+  </main>
 </body>
 </html>
