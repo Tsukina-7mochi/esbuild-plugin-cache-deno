@@ -3,7 +3,7 @@ import { esbuild } from '../deps.ts';
 export default class WarningsHandler {
   warnings: esbuild.PartialMessage[];
 
-  [Symbol.iterator]() {
+  [Symbol.iterator](): Iterable<esbuild.PartialMessage> {
     return this.warnings.values();
   }
 
