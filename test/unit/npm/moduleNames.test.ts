@@ -69,13 +69,25 @@ Deno.test('decomposeNPMModuleURL', async (testContext) => {
     path: '/index.js',
   });
 
-  // NOTE: This specifier cannot be resolved as intended:
-  // { name: '@types/react', version: undefined, fullName: '@types/react', path: '/' }
-  await testDecomposeNPMModuleURL('npm:@types/react', {
-    name: '@types',
+  await testDecomposeNPMModuleURL('npm:@types/react/index.js', {
+    name: '@types/react',
     version: undefined,
-    fullName: '@types',
-    path: '/react',
+    fullName: '@types/react',
+    path: '/index.js',
+  });
+
+  await testDecomposeNPMModuleURL('npm:@types/react@1.0.0/index.js', {
+    name: '@types/react',
+    version: '1.0.0',
+    fullName: '@types/react@1.0.0',
+    path: '/index.js',
+  });
+
+  await testDecomposeNPMModuleURL('npm:/@types/react/index.js', {
+    name: '@types/react',
+    version: undefined,
+    fullName: '@types/react',
+    path: '/index.js',
   });
 
   await testDecomposeNPMModuleURL('npm:/@types/react@1.0.0/index.js', {

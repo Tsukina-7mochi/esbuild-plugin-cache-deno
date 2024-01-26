@@ -98,25 +98,27 @@ const resolvePackageSpecifier = function (
     if (module == null) {
       return null;
     }
-    const moduleURL = lockMap.packages?.specifiers?.[`npm:${module.fullName}`];
-    if (!moduleURL) {
+    const moduleFullName = lockMap.packages?.specifiers?.[`npm:${module.fullName}`];
+    if (!moduleFullName) {
       return null;
     }
-    return new URL(`${moduleURL}${module.path}`);
+    return new URL(`${moduleFullName}${module.path}`);
   } else if (importer.protocol === 'npm:') {
+    const module = decomposeNPMModuleURL(`npm:${moduleSpecifier}`);
     const importerModule = decomposeNPMModuleURL(importer.href);
-    if (!importerModule) {
+    if (module === null || importerModule === null) {
       return null;
     }
-    if (moduleSpecifier === importerModule.name) {
+
+    if (module.name === importerModule.name) {
       return new URL(`npm:${importerModule.fullName}`);
     }
-    const module = lockMap.packages?.npm?.[importerModule.fullName]
-      ?.dependencies?.[moduleSpecifier];
-    if (!module) {
+    const moduleFullName = lockMap.packages?.npm?.[importerModule.fullName]
+      ?.dependencies?.[module.fullName];
+    if (!moduleFullName) {
       return null;
     }
-    return new URL(`npm:${module}`);
+    return new URL(`npm:${moduleFullName}${module.path}`);
   }
   return null;
 };
