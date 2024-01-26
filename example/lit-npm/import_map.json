@@ -1,0 +1,6 @@
+{
+  "imports": {
+    "lit": "npm:lit",
+    "lit/": "npm:lit/"
+  }
+}
