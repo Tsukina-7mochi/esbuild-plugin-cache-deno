@@ -1,0 +1,6 @@
+{
+  "imports": {
+    "preact": "npm:preact",
+    "preact/hooks": "npm:preact/hooks"
+  }
+}
