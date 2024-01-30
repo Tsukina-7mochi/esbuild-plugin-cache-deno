@@ -21,4 +21,4 @@ await esbuild.build({
   ],
 });
 
-esbuild.stop();
+await esbuild.stop();

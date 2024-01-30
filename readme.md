@@ -38,7 +38,7 @@ const config: esbuild.BuildOptions = {
 
 await esbuild.build(config);
 
-esbuild.stop();
+await esbuild.stop();
 ```
 
 And don't forget to cache `src/main.ts` with Deno:
