@@ -7,7 +7,8 @@ type DecomposeNPMModuleURLResult = {
 
 const moduleURLRegExp1 =
   /^npm:\/?((?<pkgName>@?[^/][^@]*)@(?<version>[^/]+))(?<path>.+)?$/;
-const moduleURLRegExp2 = /^npm:\/?((?<pkgName>([^@][^/]+|@[^/]+\/[^/]+)))(?<path>.+)?$/;
+const moduleURLRegExp2 =
+  /^npm:\/?((?<pkgName>([^@][^/]+|@[^/]+\/[^/]+)))(?<path>.+)?$/;
 const decomposeNPMModuleURL = function (
   moduleSpecifier: string,
 ): DecomposeNPMModuleURLResult | null {

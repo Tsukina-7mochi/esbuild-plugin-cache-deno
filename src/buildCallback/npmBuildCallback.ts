@@ -37,10 +37,13 @@ async (
     importMapResolver,
   );
   if (url === null) {
-    if(args.path.startsWith('npm:')) {
+    if (args.path.startsWith('npm:')) {
       return {
-        warnings: [{ text: `The URL ${args.path} may not be cached. You can try "deno cache [entry file] to make cache."` }]
-      }
+        warnings: [{
+          text:
+            `The URL ${args.path} may not be cached. You can try "deno cache [entry file] to make cache."`,
+        }],
+      };
     }
   }
 

@@ -1,4 +1,4 @@
-import { html, css, LitElement } from 'lit';
+import { css, html, LitElement } from 'lit';
 // decorators are not currently supported by esbuild
 // import { customElement, property } from 'lit/decorators.js';
 

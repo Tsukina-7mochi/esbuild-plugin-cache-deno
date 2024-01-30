@@ -98,7 +98,8 @@ const resolvePackageSpecifier = function (
     if (module == null) {
       return null;
     }
-    const moduleFullName = lockMap.packages?.specifiers?.[`npm:${module.fullName}`];
+    const moduleFullName = lockMap.packages?.specifiers
+      ?.[`npm:${module.fullName}`];
     if (!moduleFullName) {
       return null;
     }
