@@ -1,5 +1,5 @@
-# Example: Using React from npm registry
+# Example: Using Preact from npm registry
 
-Using React from npm registry, mapping `react` and `react-dom/client` to remote
-npm modules (see `import_map.json`.) Mapping paths like `react-dom/` to
-`npm:react-dom/` are not available for the specification of import map.
+Using Preact from npm registry, mapping `preact` and `preact/hooks` to remote
+npm modules (see `import_map.json`.) Mapping paths like `preact/` to
+`npm:preact/` are not available for the specification of import map.
