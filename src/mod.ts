@@ -2,7 +2,7 @@ import { esbuild, path } from '../deps.ts';
 import type { ImportMap } from './importMapResolver.ts';
 import type { LockMapV3 } from './types.ts';
 import ImportMapResolver from './importMapResolver.ts';
-import * as util from '../util.ts';
+import * as pluginUtil from './pluginUtil.ts';
 import { onImportMapKeyResolve } from './buildCallback/importMapBuildCallback.ts';
 import {
   onRemoteLoad,
@@ -184,7 +184,7 @@ function esbuildCachePlugin(options: Options): esbuild.Plugin {
   };
 }
 
-esbuildCachePlugin.util = util;
+esbuildCachePlugin.util = pluginUtil;
 
 export { esbuildCachePlugin };
 export default esbuildCachePlugin;
