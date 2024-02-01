@@ -1,0 +1,29 @@
+{
+  "ignore-modules": {
+    "type": "simple"
+  },
+  "import-map": {
+    "type": "simple"
+  },
+  "lit-esmsh": {
+    "type": "serve"
+  },
+  "lit-npm": {
+    "type": "serve"
+  },
+  "lodash-jsdelivr": {
+    "type": "simple"
+  },
+  "preact-esmsh": {
+    "type": "serve"
+  },
+  "preact-npm": {
+    "type": "serve"
+  },
+  "react-esmsh": {
+    "type": "serve"
+  },
+  "react-npm": {
+    "type": "serve"
+  }
+}
