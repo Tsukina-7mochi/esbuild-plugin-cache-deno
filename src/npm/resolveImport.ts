@@ -140,7 +140,7 @@ const resolvePackageImport = async function (
     return null;
   }
   // normalize packageURL
-  packageURL = new URL(`npm:/${module.fullName}${module.path}`);
+  packageURL = new URL(`npm:/${module.fullName}/`);
 
   const packageJSONFileURL = toCacheURL(
     new URL('package.json', packageURL),
