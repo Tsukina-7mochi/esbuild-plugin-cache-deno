@@ -1,7 +1,8 @@
 {
   "version": "3",
   "redirects": {
-    "https://esm.sh/lit": "https://esm.sh/lit@3.1.1"
+    "https://esm.sh/lit": "https://esm.sh/lit@3.1.1",
+    "https://esm.sh/lit/decorators.js": "https://esm.sh/lit@3.1.1/decorators.js"
   },
   "remote": {
     "https://deno.land/std@0.214.0/assert/assert.ts": "bec068b2fccdd434c138a555b19a2c2393b71dfaada02b7d568a01541e67cdc5",
@@ -122,11 +123,23 @@
     "https://deno.land/x/denoflate@1.2.1/pkg/denoflate_bg.wasm.js": "d581956245407a2115a3d7e8d85a9641c032940a8e810acbd59ca86afd34d44d",
     "https://deno.land/x/esbuild@v0.19.4/mod.js": "6277018cfbcad3912fd346409e0b2a9807cf10c9555a15e4aac299b3194fa4fb",
     "https://esm.sh/lit@3.1.1": "aeeda2129983ce0a9e2a33c99df012a5513cd1150f8e3451d36a2f4f2f79ed92",
+    "https://esm.sh/lit@3.1.1/decorators.js": "e28605ef567e5f47caa04ad029c3669f245b95acd502e41b40240873cdf85cd4",
     "https://esm.sh/v135/@lit/reactive-element@2.0.2/denonext/css-tag.js": "c99f9c1ccae737524e2febe3a806d07daa0ad19840832d8680b4e66c8c170252",
+    "https://esm.sh/v135/@lit/reactive-element@2.0.2/denonext/decorators/base.js": "ad33b8c8612fcbf288ebff5a3d9974f5b30380575fd4581602695bc7323c6821",
+    "https://esm.sh/v135/@lit/reactive-element@2.0.2/denonext/decorators/custom-element.js": "be7ea3986b8116069fa81bebed03046fcd582f1a1de5585e02c434015dd1cdca",
+    "https://esm.sh/v135/@lit/reactive-element@2.0.2/denonext/decorators/event-options.js": "363cdf4fe569ed2ce3dc1db7d4aed64e47de847557b95b88fd1907d02afb9178",
+    "https://esm.sh/v135/@lit/reactive-element@2.0.2/denonext/decorators/property.js": "ca951f2980514fd1b92c56ace88c6a8c414626479b2170d77fe0c54a26654a87",
+    "https://esm.sh/v135/@lit/reactive-element@2.0.2/denonext/decorators/query-all.js": "41fcaba9878754521b799fe2036eef9e83f9b8a5a2233bf308a82b1e46bd0e16",
+    "https://esm.sh/v135/@lit/reactive-element@2.0.2/denonext/decorators/query-assigned-elements.js": "e297cf78354c4e1f15210fb07b76e1fdfd0f3e1c19012413dd07759dc7ba0a89",
+    "https://esm.sh/v135/@lit/reactive-element@2.0.2/denonext/decorators/query-assigned-nodes.js": "b4206073996bb083e7ebe2dd665f7e391ce554b931a3d6bcaf03a08dfda56b89",
+    "https://esm.sh/v135/@lit/reactive-element@2.0.2/denonext/decorators/query-async.js": "31043d199c7177e3bde081936a154b19dfce2ccb1d19542c1da9c6cfa50706ca",
+    "https://esm.sh/v135/@lit/reactive-element@2.0.2/denonext/decorators/query.js": "bdcecffd8d3c3ebde0831599bc9d20edee8a2a115de720f113861af865770fd4",
+    "https://esm.sh/v135/@lit/reactive-element@2.0.2/denonext/decorators/state.js": "e58fc12a45e63952e3820f8613b1281ffc211030640bd8eac2730336748f21fc",
     "https://esm.sh/v135/@lit/reactive-element@2.0.2/denonext/reactive-element.mjs": "f08c43f7567714c65e48501ba16cdc5a03119fae96df53a371325ed731d94495",
     "https://esm.sh/v135/lit-element@4.0.2/denonext/lit-element.js": "aa80eca024df52fd4b0b37d76db3c509ac5d527f379d3678b1e2780bcc851798",
     "https://esm.sh/v135/lit-html@3.1.0/denonext/is-server.js": "10006a2acfa263f2bc879879c02542f3f0dac66781b613152f60c4d795bc9a09",
     "https://esm.sh/v135/lit-html@3.1.0/denonext/lit-html.mjs": "74c1d0686e65ad6dd94eea4b9ddcb284b70e34befec4f3aae90807eb3b9b5c7d",
+    "https://esm.sh/v135/lit@3.1.1/denonext/decorators.js": "30b80a6b117ddf8ab63bc434c7068006d7b63f8f18fcf02df5eacb1548bf5d4b",
     "https://esm.sh/v135/lit@3.1.1/denonext/lit.mjs": "bd304f49bb0aa2aea314f2bd8048b64fa6abc22dfd8a8e9272b8254a2c7120ac"
   }
 }
