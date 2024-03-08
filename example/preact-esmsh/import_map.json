@@ -1,0 +1,6 @@
+{
+  "imports": {
+    "preact": "https://esm.sh/preact",
+    "preact/": "https://esm.sh/preact/"
+  }
+}

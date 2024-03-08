@@ -1,0 +1,10 @@
+{
+  "imports": {
+    "https://example.com/foo/": "./src/polyfill/foo/"
+  },
+  "scopes": {
+    "./src/foo.ts": {
+      "https://example.com/foo/": "./src/polyfill/bar/"
+    }
+  }
+}

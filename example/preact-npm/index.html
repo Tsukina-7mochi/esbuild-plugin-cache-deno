@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Preact from npm</title>
+  <script src="./bundle.js"></script>
+  <style>
+    :root {
+      background-color: #202020;
+      color: white;
+    }
+    h1 {
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      width: 100dvw;
+      height: 100dvh;
+      margin: 0;
+      padding: 0;
+    }
+    main {
+      width: 40em;
+      height: 100%;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    button {
+      padding: 1em;
+      appearance: unset;
+      font-style: unset;
+      font-size: inherit;
+      font-weight: bolder;
+      background-color: transparent;
+      color: inherit;
+      border-radius: 0.5em;
+      border: 2px solid white;
+    }
+    button:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+    button:active {
+      background-color: rgba(255, 255, 255, 0.2);
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Preact from npm</h1>
+    <div id="root"></div>
+  </main>
+</body>
+</html>

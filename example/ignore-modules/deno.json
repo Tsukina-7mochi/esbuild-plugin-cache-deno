@@ -1,0 +1,9 @@
+{
+  "tasks": {
+    "build": "deno run -A build.ts",
+    "cache": "rm deno.lock && deno cache **/*.ts",
+    "clean": "rm -f bundle.js",
+    "run:bundle": "deno run bundle.js",
+    "run:raw": "deno run index.ts"
+  }
+}

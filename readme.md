@@ -1,169 +1,195 @@
 # esbuild Cache Plugin for Deno
 
-esbuild Cache Plugin for Deno is an esbuild plugin to resolve remote (HTTP/HTTPS) and even npm modules using Deno's cache.
+The esbuild Cache Plugin for Deno is an esbuild plugin designed to resolve remote (HTTP/HTTPS) and npm modules using Deno's cache.
 
 ## Features
 
-- Resolves http/https imports to Deno's cache.
-- Resolves npm module imports to Deno's cache.
-  - Of course resolving `import`s and `require`s in the npm module.
-  - Supports polyfill for npm modules.
-- Resolves [importmaps](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script/type/importmap).
-- Customizing loader of remote files.
+- Resolve HTTP/HTTPS imports to cached files
+- Resolve npm module imports to cached files
+- Resolve [import maps](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script/type/importmap)
+- Customize loader patterns
 
 ## Usage
 
-### Minimum Example
+To resolve http/https/npm imports, a lock file (default to `deno.lock`) file is needed.
+To create this file, ensure you have `deno.json` in your workspace directory.
+
+### Quick Example
 
 ```typescript
+// build.ts
 import { esbuild } from 'https://deno.land/x/esbuild';
 import esbuildCachePlugin from 'https://deno.land/x/esbuild_plugin_cache_deno';
-import lockMap from './lock.json' assert { type: 'json' };
 
-// To use deno.lock file, you should parse the file manually
-// const lockMap = JSON.parse(Deno.readTextFileSync('./deno.lock'));
+const lockMap = JSON.parse(Deno.readTextFileSync('./deno.lock'));
 
-const config: esbuild.BuildOptions = {
-  entryPoints: [ 'src/main.ts' ],
+// note that `util.getDenoDir` requires `--allow-run` permission
+// due to it parses `deno info` output.
+const denoDir = await esbuildCachePlugin.util.getDenoDir();
+await esbuild.build({
+  entryPoints: [ './src/main.ts' ],
   bundle: true,
   outdir: './dist',
   platform: 'browser',
   plugins: [
     esbuildCachePlugin({
       lockMap,
-      denoCacheDirectory: '/home/[user]/.cache/deno'
+      denoCacheDirectory: denoDir,
     }),
   ],
-};
+});
 
-await esbuild.build(config);
-
-esbuild.stop();
+await esbuild.stop();
 ```
 
-And don't forget to cache `src/main.ts` with Deno:
-
-```shell
-$deno cache --lock=./test/lock.json --lock-write ./src/main.ts
-# or to use deno.lock:
-# $deno cache ./src/main.ts
-```
-
-The you can use remote imports like:
+Include remote imports in your code, for instance:
 
 ```typescript
-// src/main.ts
+// ./src/main.ts
 import * as react from "https://esm.sh/react";
+// or
+// import * as react from "npm:react";
 
 console.log(react.version);
 ```
+
+Don't forget to cache `src/main.ts` with Deno:
+
+```shell
+$ deno cache ./src/main.ts
+```
+
+See more examples in `/example` directory.
 
 ### Getting Deno's Cache Path
 
-There's a utility function to get `DENO_PATH` from output of `deno info` command and you can use the pass as `denoCacheDirectory`.
+You can retrieve Deno's cache path using `deno info` command:
 
-```typescript
-const denoPath = await esbuildCachePlugin.util.getDenoDir();
+```sh
+$ deno info
+DENO_DIR location: /home/user/.cache/deno
+Remote modules cache: /home/user/.cache/deno/deps
+npm modules cache: /home/user/.cache/deno/npm
+Emitted modules cache: /home/user/.cache/deno/gen
+Language server registries cache: /home/user/.cache/deno/registries
+Origin storage: /home/user/.cache/deno/location_data
 ```
 
-Alternatively, you can pass them from CLI argument using shell scripts.
-
-### Using npm Modules
-
-You can use npm modules just like using them in Deno:
+Or use the utility function to extract the value:
 
 ```typescript
-// src/main.ts
-import * as preact from "npm:preact";
-import * as preact from "npm:/preact/hooks";
+const denoDir = await esbuildCachePlugin.util.getDenoDir();
 ```
 
-You can replace or remove some modules like Node.js's core modules using import-maps and custom loader (details are in the next section).
+## API Reference
+
+### Import
+
+Import the plugin like this:
+
+```typescript
+import esbuildCachePlugin from 'https://deno.land/x/esbuild_plugin_cache_deno';
+```
+
+Or,
+
+```typescript
+import { esbuildCachePlugin } from 'https://deno.land/x/esbuild_plugin_cache_deno';
+```
+
+### Options
+
+#### lockMap (required)
+
+The JSON parsed content of lock file.
+
+```typescript
+const lockMap = JSON.parse(Deno.readTextFileSync('./deno.lock'));
+esbuildCachePlugin({
+  lockMap,
+  denoCacheDirectory: denoDir,
+});
+```
+
+#### denoCacheDirectory (required)
+
+The cache directory of Deno (`DENO_DIR` of `deno info` command).
+
+```typescript
+const denoDir = await esbuildCachePlugin.util.getDenoDir();
+esbuildCachePlugin({
+  lockMap,
+  denoCacheDirectory: denoDir,
+});
+```
+
+#### importMap (optional)
+
+The import map of the project. By default, the plugin resolves the map based on cwd of the process. You can overwrite it with the `importMapBasePath` option.
 
 ```typescript
 esbuildCachePlugin({
   lockMap,
-  denoCacheDirectory: '/home/[user]/.cache/deno',
-  importmap: {
+  denoCacheDirectory: denoDir,
+  importMap: {
     imports: {
-      // replace "http" module to polyfill
-      "node:http": "/src/polyfill/http.ts",
-    },
-  },
-  loaderRules: [
-    // remote "util" module
-    { test: /^node:util/, loader: 'empty' },
-  ],
-}),
+      'react': 'https://esm.sh/react'
+    }
+  }
+});
 ```
 
-### Using Import Maps
+#### importMapBasePath
 
-You can pass [import maps](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script/type/importmap) with `importmap` option.
+The base path to resolve import map. Default to `Deno.cwd()`.
 
 ```typescript
 esbuildCachePlugin({
   lockMap,
-  denoCacheDirectory: '/home/[user]/.cache/deno',
-  importmap: {
+  denoCacheDirectory: denoDir,
+  importMap: {
     imports: {
-      react: "https://esm.sh/react",
-    },
+      'foo': 'util/foo.ts'
+    }
   },
-}),
+  importMapBasePath: './src',
+});
 ```
 
-Then you can use the module specifier like:
+#### loaderRules
 
-```typescript
-// src/main.ts
-import * as react from "react";
+Rules of the loaders by the module specifier to load. Default to the values below and merged with them taking higher priority.
 
-console.log(react.version);
+```
+[
+  { test: /\.(c|m)?js$/, loader: 'js' },
+  { test: /\.jsx$/, loader: 'jsx' },
+  { test: /\.(c|m)?ts$/, loader: 'ts' },
+  { test: /\.tsx$/, loader: 'tsx' },
+  { test: /\.json$/, loader: 'json' },
+  { test: /\.css$/, loader: 'css' },
+  { test: /\.txt$/, loader: 'text' },
+]
 ```
 
-Of cause you can use your import maps you're using for the intellisense:
-
-```typescript
-import importmap from './import_map.json' assert type { type: 'json' };
-
-// ...
-
-esbuildCachePlugin({
-  lockMap,
-  denoCacheDirectory: '/home/[user]/.cache/deno',
-  importmap,
-}),
-```
-
-Also you can disguise import map's path for import maps not located in the CWD:
-
-```typescript
-import importmap from './src/import_map.json' assert type { type: 'json' };
-
-// ...
-
-esbuildCachePlugin({
-  lockMap,
-  denoCacheDirectory: '/home/[user]/.cache/deno',
-  importmap,
-  importmapBasePath: 'src/',
-}),
-```
-
-### Customizing loaders
-
-You can specify loaders for files with `loaderRules` option. The plugin uses default loader as the esbuild, you may not need to use this option.
+Setting loader `empty` makes the module ignored:
 
 ```typescript
 esbuildCachePlugin({
   lockMap,
-  denoCacheDirectory: '/home/[user]/.cache/deno',
-  loaderRules: [
-    { test: /\.css$/, loader: 'css' },
-  ],
-}),
+  denoCacheDirectory: denoDir,
+  loaderRules: [{ test: /node:util/, loader: 'empty' }],
+});
 ```
+
+## Tested packages
+
+| Package |  npm  | esm.sh | jsdelivr.net |
+| ------- | :---: | :----: | :----------: |
+| React   |   ✅   |   ✅    |      -       |
+| Preact  |   ✅   |   ✅    |      -       |
+| Lit     |   ✅   |   ✅    |      -       |
+| Lodash  |   ✅   |   -    |      ✅       |
 
 ## npm Module Support
 
@@ -183,19 +209,19 @@ Reference: [Modules: Packages | Node.js v20.2.0 Documentation](https://nodejs.or
 
 Reference: [Package exports | webpack](https://webpack.js.org/guides/package-exports/#support)
 
-| Specification | Support |
-| --- | :---: |
-| `"."` property | ✅ |
-| Normal property | ✅ |
-| Property ending with `/` | ✅ |
-| Property ending with `*` | - |
-| Alternatives | - |
-| Abbreviation only path | ✅ |
-| Abbreviation only conditions | ✅ |
-| Conditional syntax | ✅ |
-| Nested conditional syntax | ✅ |
-| Conditions order | - |
-| `"default"` condition | ✅ |
-| Path order | - |
-| Error when not mapped | - |
-| Error when mixind conditions and paths | ✅ |
+|             Specification              | Support |
+| -------------------------------------- | :-----: |
+| `"."` property                         |    ✅    |
+| Normal property                        |    ✅    |
+| Property ending with `/`               |    ✅    |
+| Property ending with `*`               |    -    |
+| Alternatives                           |    -    |
+| Abbreviation only path                 |    ✅    |
+| Abbreviation only conditions           |    ✅    |
+| Conditional syntax                     |    ✅    |
+| Nested conditional syntax              |    ✅    |
+| Conditions order                       |    -    |
+| `"default"` condition                  |    ✅    |
+| Path order                             |    -    |
+| Error when not mapped                  |    -    |
+| Error when mixind conditions and paths |    ✅    |

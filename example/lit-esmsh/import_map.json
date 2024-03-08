@@ -1,0 +1,6 @@
+{
+  "imports": {
+    "lit": "https://esm.sh/lit",
+    "lit/": "https://esm.sh/lit/"
+  }
+}
