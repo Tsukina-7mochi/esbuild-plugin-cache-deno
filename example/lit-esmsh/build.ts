@@ -6,6 +6,8 @@ const lockMap = JSON.parse(Deno.readTextFileSync('./deno.lock'));
 
 const denoPath = await esbuildCachePlugin.util.getDenoDir();
 await esbuild.build({
+  target: 'esnext',
+  platform: 'browser',
   entryPoints: ['./index.ts'],
   bundle: true,
   outfile: './bundle.js',

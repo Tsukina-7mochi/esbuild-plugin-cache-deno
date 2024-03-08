@@ -1,11 +1,8 @@
 import { css, html, LitElement } from 'lit';
-// decorators are not currently supported by esbuild
-// import { customElement, property } from 'lit/decorators.js';
+import { customElement, property } from 'lit/decorators.js';
 
+@customElement('my-counter')
 export class MyCounter extends LitElement {
-  static properties = {
-    count: { type: Number },
-  };
   static styles = css`
     button {
       padding: 1em;
@@ -26,13 +23,8 @@ export class MyCounter extends LitElement {
     }
   `;
 
-  declare count: number;
-
-  constructor() {
-    super();
-    this.count = 0;
-  }
-
+  @property({ type: Number })
+  accessor count = 0;
   private _increment() {
     this.count += 1;
   }
@@ -43,4 +35,3 @@ export class MyCounter extends LitElement {
     `;
   }
 }
-customElements.define('my-counter', MyCounter);
