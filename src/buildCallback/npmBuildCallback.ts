@@ -45,6 +45,7 @@ async (
         }],
       };
     }
+    return null;
   }
 
   const loader = getLoader(url.href) ?? undefined;
