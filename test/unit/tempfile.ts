@@ -16,7 +16,7 @@ const createTempFiles = async function(entry: PathEntry, root: string, clean = t
     if(typeof item === 'string') {
       await Deno.writeFile(path.join(root, key), textEncoder.encode(item));
     } else {
-      const pathName = path.join(root, key.replace('/', path.SEP));
+      const pathName = path.join(root, key.replace('/', path.SEPARATOR));
       await fs.ensureDir(pathName);
       await createTempFiles(item, pathName, false);
     }
